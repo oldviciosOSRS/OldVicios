@@ -14,11 +14,19 @@ public interface OldViciosConfig extends Config
 
 	String DEFAULT_LOOT_MESSAGE = "%USERNAME% has looted: \n\n%LOOT%\nFrom: %SOURCE%";
 
+	@ConfigSection(
+		name = "Geral",
+		description = "Configurações gerais do plugin",
+		position = -1
+	)
+	String generalSection = "general";
+
 	@ConfigItem(
 		keyName = "sidebarPriority",
 		name = "Posição na barra lateral",
 		description = "Posição do ícone do OldVicios na barra lateral do RuneLite. Quanto menor, mais pra cima",
-		position = -1
+		section = generalSection,
+		position = 0
 	)
 	@Range(min = -10, max = 100)
 	default int sidebarPriority()
