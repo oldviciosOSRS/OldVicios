@@ -138,6 +138,18 @@ class OldViciosApi
 		});
 	}
 
+	/** Notificações depois do cursor. since null = só pega o cursor atual. accountId opcional. */
+	void fetchUpdates(String accountId, Integer since, Consumer<Result> callback)
+	{
+		String url = BASE_URL + "/updates" + (since != null ? "?since=" + since : "");
+		Request.Builder request = new Request.Builder().url(url).get();
+		if (accountId != null)
+		{
+			request.header("X-OV-Account", accountId);
+		}
+		send(request.build(), callback);
+	}
+
 	/** Baixa uma imagem (fora da client thread). null em caso de erro. */
 	void fetchImage(String url, Consumer<BufferedImage> callback)
 	{

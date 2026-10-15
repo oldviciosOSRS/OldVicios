@@ -1,6 +1,7 @@
 package com.oldvicios;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
@@ -29,7 +30,12 @@ import net.runelite.api.WorldType;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.client.Notifier;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.chat.ChatColorType;
+import net.runelite.client.chat.ChatMessageBuilder;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.NpcLootReceived;
@@ -77,6 +83,7 @@ public class OldViciosPlugin extends Plugin
 
 	private static final long DEFAULT_MIN_LOOT_VALUE = 3_000_000L;
 	private static final long CONTENT_REFRESH_MINUTES = 5;
+	private static final long UPDATES_POLL_SECONDS = 45;
 
 	@Inject
 	private Client client;
@@ -102,9 +109,18 @@ public class OldViciosPlugin extends Plugin
 	@Inject
 	private OldViciosApi api;
 
+	@Inject
+	private Notifier notifier;
+
+	@Inject
+	private ChatMessageManager chatMessageManager;
+
 	private OldViciosPanel panel;
 	private NavigationButton navButton;
 	private ScheduledFuture<?> contentRefresh;
+	private ScheduledFuture<?> updatesPoll;
+	// Última notificação já vista (null = ainda não sabemos; a 1ª consulta só pega o cursor)
+	private volatile Integer updatesCursor;
 	// Imagens dos cards: baixadas uma vez por sessão
 	private final Map<String, BufferedImage> imageCache = new ConcurrentHashMap<>();
 
@@ -126,6 +142,7 @@ public class OldViciosPlugin extends Plugin
 			.build();
 		clientToolbar.addNavigation(navButton);
 		contentRefresh = executor.scheduleWithFixedDelay(this::refreshContent, 0, CONTENT_REFRESH_MINUTES, TimeUnit.MINUTES);
+		updatesPoll = executor.scheduleWithFixedDelay(this::pollUpdates, 0, UPDATES_POLL_SECONDS, TimeUnit.SECONDS);
 
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
@@ -145,6 +162,12 @@ public class OldViciosPlugin extends Plugin
 			contentRefresh.cancel(false);
 			contentRefresh = null;
 		}
+		if (updatesPoll != null)
+		{
+			updatesPoll.cancel(false);
+			updatesPoll = null;
+		}
+		updatesCursor = null;
 		clientToolbar.removeNavigation(navButton);
 		navButton = null;
 		panel = null;
@@ -384,6 +407,58 @@ public class OldViciosPlugin extends Plugin
 	{
 		api.fetchCards("notices", cards -> onPanel(p -> p.setNotices(cards)));
 		api.fetchCards("events", cards -> onPanel(p -> p.setEvents(cards)));
+	}
+
+	private void pollUpdates()
+	{
+		Integer since = updatesCursor;
+		api.fetchUpdates(accountId, since, result ->
+		{
+			if (!result.ok())
+			{
+				return;
+			}
+			updatesCursor = result.data.get("cursor").getAsInt();
+			if (since == null || !result.data.has("messages"))
+			{
+				return;
+			}
+			boolean refresh = false;
+			for (JsonElement element : result.data.getAsJsonArray("messages"))
+			{
+				JsonObject message = element.getAsJsonObject();
+				String kind = message.get("kind").getAsString();
+				String title = message.get("title").getAsString();
+				String text = message.has("text") && !message.get("text").isJsonNull() ? message.get("text").getAsString() : null;
+				notify(title, text);
+				refresh |= "EVENT".equals(kind) || "NOTICE".equals(kind);
+			}
+			if (refresh)
+			{
+				refreshContent();
+			}
+		});
+	}
+
+	private void notify(String title, String text)
+	{
+		String line = text != null ? title + " - " + text : title;
+		clientThread.invokeLater(() ->
+		{
+			if (config.chatNotifications() && client.getGameState() == GameState.LOGGED_IN)
+			{
+				chatMessageManager.queue(QueuedMessage.builder()
+					.type(ChatMessageType.CONSOLE)
+					.runeLiteFormattedMessage(new ChatMessageBuilder()
+						.append(ChatColorType.HIGHLIGHT)
+						.append("[OldVicios] ")
+						.append(ChatColorType.NORMAL)
+						.append(line)
+						.build())
+					.build());
+			}
+			notifier.notify(config.notification(), "OldVicios: " + line);
+		});
 	}
 
 	/** Entrega a imagem na EDT, do cache ou baixando. */

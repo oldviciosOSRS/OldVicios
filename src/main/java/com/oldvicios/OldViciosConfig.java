@@ -4,6 +4,7 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Notification;
 
 @ConfigGroup(OldViciosConfig.GROUP)
 public interface OldViciosConfig extends Config
@@ -18,6 +19,13 @@ public interface OldViciosConfig extends Config
 		position = 0
 	)
 	String dropsSection = "drops";
+
+	@ConfigSection(
+		name = "Notificações",
+		description = "Avisos de novos eventos, avisos da staff e mensagens pra você",
+		position = 1
+	)
+	String notificationsSection = "notifications";
 
 	@ConfigItem(
 		keyName = "sendDrops",
@@ -54,5 +62,29 @@ public interface OldViciosConfig extends Config
 	default String lootMessage()
 	{
 		return DEFAULT_LOOT_MESSAGE;
+	}
+
+	@ConfigItem(
+		keyName = "chatNotifications",
+		name = "Mensagem no chat",
+		description = "Mostra no chat do jogo quando sai um evento, um aviso ou uma mensagem pra você",
+		section = notificationsSection,
+		position = 0
+	)
+	default boolean chatNotifications()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "notification",
+		name = "Notificação do RuneLite",
+		description = "Notificação do RuneLite (sistema, som, piscar a tela...). Clique na engrenagem pra escolher como receber",
+		section = notificationsSection,
+		position = 1
+	)
+	default Notification notification()
+	{
+		return Notification.ON;
 	}
 }
