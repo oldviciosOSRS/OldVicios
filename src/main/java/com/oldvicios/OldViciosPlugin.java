@@ -133,6 +133,9 @@ public class OldViciosPlugin extends Plugin
 	@Inject
 	private EventBus eventBus;
 
+	@Inject
+	private ConfigManager configManager;
+
 	private OldViciosPanel panel;
 	private NavigationButton navButton;
 	private ScheduledFuture<?> contentRefresh;
@@ -167,7 +170,7 @@ public class OldViciosPlugin extends Plugin
 		}
 		else
 		{
-			setStatus("Entre no jogo para conectar");
+			showWelcome(loggedOutMessage());
 		}
 	}
 
@@ -246,7 +249,7 @@ public class OldViciosPlugin extends Plugin
 			authPending = false;
 			accountId = null;
 			updatesCursor = null;
-			disconnect("Entre no jogo para conectar");
+			disconnect(loggedOutMessage());
 		}
 	}
 
@@ -309,7 +312,7 @@ public class OldViciosPlugin extends Plugin
 
 	private void authenticate(String playerName)
 	{
-		setStatus("Conectando...");
+		showWelcome("Conectando...");
 		api.authenticate(accountId, playerName, result ->
 		{
 			if (result.ok())
@@ -320,6 +323,7 @@ public class OldViciosPlugin extends Plugin
 				}
 				connectedName = result.data.get("playerName").getAsString();
 				connected = true;
+				configManager.setConfiguration(OldViciosConfig.GROUP, "hasConnected", true);
 				clientThread.invokeLater(this::updateHeader);
 				refreshContent();
 				return;
@@ -518,8 +522,7 @@ public class OldViciosPlugin extends Plugin
 		connected = false;
 		connectedName = null;
 		headerPending = false;
-		setStatus(reason);
-		onPanel(p -> p.lockContent(OldViciosPanel.LOCKED_MESSAGE));
+		showWelcome(reason);
 	}
 
 	private void refreshContent()
@@ -624,12 +627,19 @@ public class OldViciosPlugin extends Plugin
 		}
 	}
 
-	private void setStatus(String text)
+	private String loggedOutMessage()
+	{
+		return config.hasConnected()
+			? "Faça login no RuneScape para acessar o conteúdo do clã."
+			: "Entre no jogo com seu personagem do clã para conectar.";
+	}
+
+	private void showWelcome(String text)
 	{
 		OldViciosPanel p = panel;
 		if (p != null)
 		{
-			SwingUtilities.invokeLater(() -> p.setStatus(text));
+			SwingUtilities.invokeLater(() -> p.showWelcome(text));
 		}
 	}
 

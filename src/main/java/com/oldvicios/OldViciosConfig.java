@@ -108,4 +108,15 @@ public interface OldViciosConfig extends Config
 	{
 		return Notification.ON;
 	}
+
+	@ConfigItem(
+		keyName = "hasConnected",
+		name = "",
+		description = "Se este RuneLite já conectou ao OldVicios (muda a mensagem da tela de boas-vindas)",
+		hidden = true
+	)
+	default boolean hasConnected()
+	{
+		return false;
+	}
 }

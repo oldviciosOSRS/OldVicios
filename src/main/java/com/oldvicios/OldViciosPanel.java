@@ -1,6 +1,7 @@
 package com.oldvicios;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
@@ -32,19 +33,25 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
 
 /**
- * Painel lateral: cabeçalho (logo do OV + status da conexão) e abas Avisos/Eventos com cards.
+ * Painel lateral com duas telas: boas-vindas (deslogado / sem acesso: logo, descrição do clã e o
+ * motivo) e a do clã (cabeçalho "[cargo] nick" + abas Avisos/Eventos). Rodapé com links em ambas.
  * Todos os métodos devem ser chamados na Swing EDT.
  */
 class OldViciosPanel extends PluginPanel
 {
 	private static final int LOGO_WIDTH = 56;
+	private static final int WELCOME_LOGO_WIDTH = 96;
+	private static final String WELCOME_CARD = "welcome";
+	private static final String CLAN_CARD = "clan";
 	private static final int LINK_ICON_SIZE = 16;
-	static final String LOCKED_MESSAGE = "<html><div style='text-align:center'>Entre no jogo com um personagem<br>do clã para ver o conteúdo</div></html>";
 	private static final String SITE_URL = "https://oldvicios.com.br";
 	private static final String DISCORD_URL = "https://discord.gg/GV5qbrGyAA";
 	private static final String WOM_URL = "https://wiseoldman.net/groups/715";
 
 	private final JLabel status = new JLabel();
+	private final JLabel welcomeMessage = new JLabel();
+	private final CardLayout cards = new CardLayout();
+	private final JPanel center = new JPanel(cards);
 	private final JPanel noticesList = cardList();
 	private final JPanel eventsList = cardList();
 	private final BiConsumer<String, Consumer<BufferedImage>> imageLoader;
@@ -60,12 +67,60 @@ class OldViciosPanel extends PluginPanel
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		JPanel top = new JPanel(new BorderLayout());
-		top.setOpaque(false);
-		top.add(configButton(openConfig), BorderLayout.NORTH);
-		top.add(header(), BorderLayout.CENTER);
-		add(top, BorderLayout.NORTH);
+		add(configButton(openConfig), BorderLayout.NORTH);
 
+		center.setOpaque(false);
+		center.add(welcome(), WELCOME_CARD);
+		center.add(clan(), CLAN_CARD);
+		add(center, BorderLayout.CENTER);
+		add(footer(), BorderLayout.SOUTH);
+
+		showWelcome("Entre no jogo com seu personagem do clã para conectar.");
+	}
+
+	/** Tela de deslogado / sem acesso: logo e nome centralizados, descrição do clã e o motivo. */
+	private JPanel welcome()
+	{
+		JPanel box = new JPanel();
+		box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+		box.setOpaque(false);
+
+		BufferedImage logoImage = ImageUtil.loadImageResource(OldViciosPanel.class, "logo.png");
+		int logoHeight = Math.round(logoImage.getHeight() * (WELCOME_LOGO_WIDTH / (float) logoImage.getWidth()));
+		JLabel logo = new JLabel(new ImageIcon(ImageUtil.resizeImage(logoImage, WELCOME_LOGO_WIDTH, logoHeight)));
+		logo.setAlignmentX(Component.CENTER_ALIGNMENT);
+		box.add(logo);
+		box.add(Box.createVerticalStrut(10));
+
+		JLabel title = new JLabel("OldVicios");
+		title.setFont(FontManager.getRunescapeBoldFont());
+		title.setForeground(ColorScheme.BRAND_ORANGE);
+		title.setAlignmentX(Component.CENTER_ALIGNMENT);
+		box.add(title);
+		box.add(Box.createVerticalStrut(8));
+
+		JLabel description = new JLabel(centered("A maior comunidade brasileira de Old School RuneScape."));
+		description.setFont(FontManager.getRunescapeSmallFont());
+		description.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		description.setAlignmentX(Component.CENTER_ALIGNMENT);
+		box.add(description);
+		box.add(Box.createVerticalStrut(16));
+
+		welcomeMessage.setFont(FontManager.getRunescapeSmallFont());
+		welcomeMessage.setForeground(java.awt.Color.WHITE);
+		welcomeMessage.setAlignmentX(Component.CENTER_ALIGNMENT);
+		box.add(welcomeMessage);
+
+		JPanel welcome = new JPanel(new GridBagLayout());
+		welcome.setOpaque(false);
+		welcome.setBorder(BorderFactory.createEmptyBorder(0, 10, 20, 10));
+		welcome.add(box);
+		return welcome;
+	}
+
+	/** Tela do clã: cabeçalho com o jogador e as abas. */
+	private JPanel clan()
+	{
 		JPanel display = new JPanel(new BorderLayout());
 		display.setOpaque(false);
 		MaterialTabGroup tabs = new MaterialTabGroup(display);
@@ -81,11 +136,17 @@ class OldViciosPanel extends PluginPanel
 		content.setBorder(BorderFactory.createEmptyBorder(0, 6, 6, 6));
 		content.add(tabs, BorderLayout.NORTH);
 		content.add(display, BorderLayout.CENTER);
-		add(content, BorderLayout.CENTER);
-		add(footer(), BorderLayout.SOUTH);
 
-		setStatus("Entre no jogo para conectar");
-		lockContent(LOCKED_MESSAGE);
+		JPanel clan = new JPanel(new BorderLayout());
+		clan.setOpaque(false);
+		clan.add(header(), BorderLayout.NORTH);
+		clan.add(content, BorderLayout.CENTER);
+		return clan;
+	}
+
+	private static String centered(String text)
+	{
+		return "<html><div style='text-align:center;width:170px'>" + text + "</div></html>";
 	}
 
 	/** Engrenagem no canto superior direito que abre as configurações do plugin. */
@@ -210,15 +271,16 @@ class OldViciosPanel extends PluginPanel
 		status.setText(CardPanel.escape(text));
 		status.setForeground(java.awt.Color.WHITE);
 		status.setFont(FontManager.getRunescapeBoldFont());
+		cards.show(center, CLAN_CARD);
 	}
 
-	void setStatus(String text)
+	/** Mostra a tela de boas-vindas com a mensagem e tira o conteúdo do clã da tela. */
+	void showWelcome(String message)
 	{
-		status.setIcon(null);
-		status.setToolTipText(null);
-		status.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		status.setFont(FontManager.getRunescapeSmallFont());
-		status.setText("<html><div style='text-align:center;width:180px'>" + CardPanel.escape(text) + "</div></html>");
+		welcomeMessage.setText(centered(CardPanel.escape(message)));
+		noticesList.removeAll();
+		eventsList.removeAll();
+		cards.show(center, WELCOME_CARD);
 	}
 
 	void setNotices(List<ContentCard> cards)
@@ -229,13 +291,6 @@ class OldViciosPanel extends PluginPanel
 	void setEvents(List<ContentCard> cards)
 	{
 		fill(eventsList, cards, CardPanel.Kind.EVENT, "Nenhum evento agendado");
-	}
-
-	/** Tira o conteúdo do clã da tela (deslogado, fora do clã ou bloqueado). */
-	void lockContent(String reason)
-	{
-		showMessage(noticesList, reason);
-		showMessage(eventsList, reason);
 	}
 
 	private void fill(JPanel list, List<ContentCard> cards, CardPanel.Kind kind, String emptyMessage)
