@@ -36,6 +36,9 @@ import okhttp3.ResponseBody;
 @Singleton
 class OldViciosApi
 {
+	/** Versão do plugin, enviada em toda chamada (X-OV-Version). Manter igual a runelite-plugin.properties. */
+	static final String VERSION = "0.1.0";
+
 	private static final String BASE_URL = "https://api.oldvicios.com.br/v1/plugin";
 	private static final String ACCOUNT_SALT = "oldvicios-plugin-v1";
 	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -192,8 +195,10 @@ class OldViciosApi
 		});
 	}
 
-	private void send(Request request, Consumer<Result> callback)
+	private void send(Request unversioned, Consumer<Result> callback)
 	{
+		// Toda chamada pra API leva a versão, pro backend saber quem está desatualizado
+		Request request = unversioned.newBuilder().header("X-OV-Version", VERSION).build();
 		okHttpClient.newCall(request).enqueue(new Callback()
 		{
 			@Override
