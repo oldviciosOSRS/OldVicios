@@ -31,7 +31,6 @@ class CardPanel extends JPanel
 {
 	// Largura usada antes do card ser exibido (depois ela acompanha a largura real do card)
 	private static final int DEFAULT_IMAGE_WIDTH = 190;
-	private static final int IMAGE_MAX_HEIGHT = 140;
 	private static final int TEXT_WIDTH = 180;
 	private static final ZoneId BRT = ZoneId.of("America/Sao_Paulo");
 	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM");
@@ -159,13 +158,9 @@ class CardPanel extends JPanel
 		}
 		imageWidth = width;
 
-		int height = Math.round(source.getHeight() * (width / (float) source.getWidth()));
-		java.awt.Image scaled = source.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH);
-		BufferedImage canvas = new BufferedImage(width, Math.min(height, IMAGE_MAX_HEIGHT), BufferedImage.TYPE_INT_ARGB);
-		// Imagem muito alta: corta no meio pra um card não ocupar a tela toda
-		int offset = Math.max(0, (height - IMAGE_MAX_HEIGHT) / 2);
-		canvas.getGraphics().drawImage(scaled, 0, -offset, null);
-		image.setIcon(new ImageIcon(canvas));
+		// Igual a "width: 100%; height: auto" no CSS: cabe na largura e a altura acompanha, sem cortar
+		int height = Math.max(1, Math.round(source.getHeight() * (width / (float) source.getWidth())));
+		image.setIcon(new ImageIcon(source.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH)));
 		image.setVisible(true);
 		revalidate();
 		repaint();
