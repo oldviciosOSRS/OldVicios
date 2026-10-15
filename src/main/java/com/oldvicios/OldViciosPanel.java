@@ -2,6 +2,8 @@ package com.oldvicios;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.awt.GridBagLayout;
 import java.awt.image.BufferedImage;
 import java.util.List;
@@ -14,6 +16,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.Scrollable;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import net.runelite.client.ui.ColorScheme;
@@ -109,8 +112,9 @@ class OldViciosPanel extends PluginPanel
 
 	private static JScrollPane scroll(JPanel list)
 	{
-		// Wrapper com BorderLayout.NORTH pra lista não esticar quando tem poucos cards
-		JPanel wrapper = new JPanel(new BorderLayout());
+		// Wrapper com BorderLayout.NORTH pra lista não esticar quando tem poucos cards,
+		// travado na largura visível (senão o conteúdo fica mais largo e corta na direita)
+		JPanel wrapper = new ViewportWidthPanel();
 		wrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		wrapper.add(list, BorderLayout.NORTH);
 
@@ -171,5 +175,44 @@ class OldViciosPanel extends PluginPanel
 		list.add(holder);
 		list.revalidate();
 		list.repaint();
+	}
+
+	/** Painel que sempre tem a largura da área visível do scroll (como width: 100% no CSS). */
+	private static class ViewportWidthPanel extends JPanel implements Scrollable
+	{
+		ViewportWidthPanel()
+		{
+			super(new BorderLayout());
+		}
+
+		@Override
+		public Dimension getPreferredScrollableViewportSize()
+		{
+			return getPreferredSize();
+		}
+
+		@Override
+		public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction)
+		{
+			return 16;
+		}
+
+		@Override
+		public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction)
+		{
+			return visibleRect.height;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportWidth()
+		{
+			return true;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportHeight()
+		{
+			return false;
+		}
 	}
 }

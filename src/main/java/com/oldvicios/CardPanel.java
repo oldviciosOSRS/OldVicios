@@ -31,11 +31,16 @@ class CardPanel extends JPanel
 {
 	// Largura usada antes do card ser exibido (depois ela acompanha a largura real do card)
 	private static final int DEFAULT_IMAGE_WIDTH = 190;
-	private static final int TEXT_WIDTH = 180;
+	// Largura do texto antes do card ser exibido (depois acompanha a largura real do card)
+	private static final int DEFAULT_TEXT_WIDTH = 180;
 	private static final ZoneId BRT = ZoneId.of("America/Sao_Paulo");
 	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM");
 
 	private final JLabel image = new JLabel();
+	private final JLabel title = new JLabel();
+	private final String titleHtml;
+	private final String bodyHtml;
+	private int textWidth;
 	private final JLabel body = new JLabel();
 	private final JLabel toggle = new JLabel();
 	private boolean expanded;
@@ -65,10 +70,11 @@ class CardPanel extends JPanel
 			public void componentResized(ComponentEvent e)
 			{
 				renderImage();
+				renderText();
 			}
 		});
 
-		JLabel title = new JLabel(html(escape(card.title)));
+		titleHtml = escape(card.title);
 		title.setFont(FontManager.getRunescapeBoldFont());
 		title.setForeground(Color.WHITE);
 		title.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -90,7 +96,7 @@ class CardPanel extends JPanel
 		}
 
 		boolean hasText = card.text != null && !card.text.isEmpty();
-		body.setText(hasText ? html(markdownToHtml(card.text)) : "");
+		bodyHtml = hasText ? markdownToHtml(card.text) : "";
 		body.setFont(FontManager.getRunescapeSmallFont());
 		body.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		body.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -121,13 +127,31 @@ class CardPanel extends JPanel
 			add(toggle);
 			setExpanded(false);
 		}
+		renderText();
+	}
+
+	/** Reaplica o HTML com a largura atual do card, pra quebrar linha sem cortar o texto. */
+	private void renderText()
+	{
+		Insets insets = getInsets();
+		int width = getWidth() > 0 ? getWidth() - insets.left - insets.right - 4 : DEFAULT_TEXT_WIDTH;
+		if (width <= 0 || width == textWidth)
+		{
+			return;
+		}
+		textWidth = width;
+		title.setText(html(titleHtml, width));
+		body.setText(bodyHtml.isEmpty() ? "" : html(bodyHtml, width));
+		revalidate();
+		repaint();
 	}
 
 	private void setExpanded(boolean expanded)
 	{
 		this.expanded = expanded;
 		body.setVisible(expanded);
-		toggle.setText(expanded ? "Ver menos ▴" : "Ver mais ▾");
+		// A fonte do RuneScape não tem setas (▾▴); + e - existem
+		toggle.setText(expanded ? "- Ver menos" : "+ Ver mais");
 		revalidate();
 		repaint();
 	}
@@ -218,8 +242,8 @@ class CardPanel extends JPanel
 			.replace("\n", "<br>");
 	}
 
-	private static String html(String content)
+	private static String html(String content, int width)
 	{
-		return "<html><div style='width:" + TEXT_WIDTH + "px'>" + content + "</div></html>";
+		return "<html><div style='width:" + width + "px'>" + content + "</div></html>";
 	}
 }
