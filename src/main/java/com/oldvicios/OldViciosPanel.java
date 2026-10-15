@@ -39,6 +39,9 @@ import net.runelite.client.util.LinkBrowser;
  */
 class OldViciosPanel extends PluginPanel
 {
+	// Amarelo do OV: o mesmo dos embeds de drop no Discord, combina com o dourado do logo
+	static final java.awt.Color YELLOW = new java.awt.Color(0xF1C40F);
+
 	private static final int LOGO_WIDTH = 56;
 	private static final int WELCOME_LOGO_WIDTH = 96;
 	private static final String WELCOME_CARD = "welcome";
@@ -94,7 +97,7 @@ class OldViciosPanel extends PluginPanel
 
 		JLabel title = new JLabel("OldVicios");
 		title.setFont(FontManager.getRunescapeBoldFont());
-		title.setForeground(ColorScheme.BRAND_ORANGE);
+		title.setForeground(YELLOW);
 		title.setAlignmentX(Component.CENTER_ALIGNMENT);
 		box.add(title);
 		box.add(Box.createVerticalStrut(8));
@@ -199,7 +202,7 @@ class OldViciosPanel extends PluginPanel
 			@Override
 			public void mouseEntered(MouseEvent e)
 			{
-				label.setForeground(ColorScheme.BRAND_ORANGE);
+				label.setForeground(YELLOW);
 			}
 
 			@Override
@@ -227,7 +230,7 @@ class OldViciosPanel extends PluginPanel
 
 		JLabel title = new JLabel("OldVicios");
 		title.setFont(FontManager.getRunescapeBoldFont());
-		title.setForeground(ColorScheme.BRAND_ORANGE);
+		title.setForeground(YELLOW);
 		title.setAlignmentX(Component.CENTER_ALIGNMENT);
 		header.add(title);
 		header.add(Box.createVerticalStrut(2));

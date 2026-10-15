@@ -90,7 +90,7 @@ class CardPanel extends JPanel
 		{
 			JLabel date = new JLabel(dateText);
 			date.setFont(FontManager.getRunescapeSmallFont());
-			date.setForeground(kind == Kind.EVENT ? ColorScheme.BRAND_ORANGE : ColorScheme.LIGHT_GRAY_COLOR);
+			date.setForeground(kind == Kind.EVENT ? OldViciosPanel.YELLOW : ColorScheme.LIGHT_GRAY_COLOR);
 			date.setAlignmentX(Component.LEFT_ALIGNMENT);
 			add(date);
 		}
@@ -107,7 +107,7 @@ class CardPanel extends JPanel
 		if (hasText)
 		{
 			toggle.setFont(FontManager.getRunescapeSmallFont());
-			toggle.setForeground(ColorScheme.BRAND_ORANGE);
+			toggle.setForeground(OldViciosPanel.YELLOW);
 			toggle.setAlignmentX(Component.LEFT_ALIGNMENT);
 			// O card inteiro abre/fecha. mousePressed (e não mouseClicked) porque o clicked
 			// é descartado se o mouse mexer um pixel entre apertar e soltar.
