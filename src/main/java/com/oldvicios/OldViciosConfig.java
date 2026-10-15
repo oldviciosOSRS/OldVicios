@@ -12,6 +12,9 @@ public interface OldViciosConfig extends Config
 {
 	String GROUP = "oldvicios";
 
+	// Texto exigido pelo RuneLite em toggles que mandam dados pra servidor de terceiros
+	String THIRD_PARTY_WARNING = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers";
+
 	String DEFAULT_LOOT_MESSAGE = "%USERNAME% has looted: \n\n%LOOT%\nFrom: %SOURCE%";
 
 	@ConfigSection(
@@ -52,18 +55,21 @@ public interface OldViciosConfig extends Config
 		keyName = "sendDrops",
 		name = "Enviar drops",
 		description = "Publica seus drops no Discord do OldVicios",
+		warning = THIRD_PARTY_WARNING,
 		section = dropsSection,
 		position = 0
 	)
 	default boolean sendDrops()
 	{
-		return true;
+		// Regra do Plugin Hub: envio pra servidor de terceiros começa desligado (opt-in)
+		return false;
 	}
 
 	@ConfigItem(
 		keyName = "sendPkDrops",
 		name = "Enviar drops PK",
 		description = "Publica seus drops de PvP no canal de PK do Discord do OldVicios",
+		warning = THIRD_PARTY_WARNING,
 		section = dropsSection,
 		position = 1
 	)
