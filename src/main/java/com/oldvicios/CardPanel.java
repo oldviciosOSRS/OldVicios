@@ -4,6 +4,9 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -26,7 +29,8 @@ import net.runelite.client.ui.FontManager;
  */
 class CardPanel extends JPanel
 {
-	static final int IMAGE_WIDTH = 190;
+	// Largura usada antes do card ser exibido (depois ela acompanha a largura real do card)
+	private static final int DEFAULT_IMAGE_WIDTH = 190;
 	private static final int IMAGE_MAX_HEIGHT = 140;
 	private static final int TEXT_WIDTH = 180;
 	private static final ZoneId BRT = ZoneId.of("America/Sao_Paulo");
@@ -36,6 +40,8 @@ class CardPanel extends JPanel
 	private final JLabel body = new JLabel();
 	private final JLabel toggle = new JLabel();
 	private boolean expanded;
+	private BufferedImage source;
+	private int imageWidth;
 
 	enum Kind
 	{
@@ -52,6 +58,16 @@ class CardPanel extends JPanel
 		image.setAlignmentX(Component.LEFT_ALIGNMENT);
 		image.setVisible(false);
 		add(image);
+
+		// A imagem ocupa a largura toda do card, qualquer que seja a largura do painel
+		addComponentListener(new ComponentAdapter()
+		{
+			@Override
+			public void componentResized(ComponentEvent e)
+			{
+				renderImage();
+			}
+		});
 
 		JLabel title = new JLabel(html(escape(card.title)));
 		title.setFont(FontManager.getRunescapeBoldFont());
@@ -119,14 +135,32 @@ class CardPanel extends JPanel
 		{
 			return;
 		}
-		int height = Math.round(source.getHeight() * (IMAGE_WIDTH / (float) source.getWidth()));
-		java.awt.Image scaled = source.getScaledInstance(IMAGE_WIDTH, height, java.awt.Image.SCALE_SMOOTH);
-		BufferedImage canvas = new BufferedImage(IMAGE_WIDTH, Math.min(height, IMAGE_MAX_HEIGHT), BufferedImage.TYPE_INT_ARGB);
+		this.source = source;
+		imageWidth = 0;
+		renderImage();
+	}
+
+	private void renderImage()
+	{
+		if (source == null)
+		{
+			return;
+		}
+		Insets insets = getInsets();
+		int width = getWidth() > 0 ? getWidth() - insets.left - insets.right : DEFAULT_IMAGE_WIDTH;
+		if (width <= 0 || width == imageWidth)
+		{
+			return;
+		}
+		imageWidth = width;
+
+		int height = Math.round(source.getHeight() * (width / (float) source.getWidth()));
+		java.awt.Image scaled = source.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH);
+		BufferedImage canvas = new BufferedImage(width, Math.min(height, IMAGE_MAX_HEIGHT), BufferedImage.TYPE_INT_ARGB);
 		// Imagem muito alta: corta no meio pra um card não ocupar a tela toda
 		int offset = Math.max(0, (height - IMAGE_MAX_HEIGHT) / 2);
 		canvas.getGraphics().drawImage(scaled, 0, -offset, null);
 		image.setIcon(new ImageIcon(canvas));
-		image.setPreferredSize(new Dimension(IMAGE_WIDTH, canvas.getHeight()));
 		image.setVisible(true);
 		revalidate();
 		repaint();
