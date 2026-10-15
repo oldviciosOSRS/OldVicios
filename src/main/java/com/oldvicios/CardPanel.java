@@ -103,14 +103,19 @@ class CardPanel extends JPanel
 		{
 			toggle.setFont(FontManager.getRunescapeSmallFont());
 			toggle.setForeground(ColorScheme.BRAND_ORANGE);
-			toggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 			toggle.setAlignmentX(Component.LEFT_ALIGNMENT);
-			toggle.addMouseListener(new MouseAdapter()
+			// O card inteiro abre/fecha. mousePressed (e não mouseClicked) porque o clicked
+			// é descartado se o mouse mexer um pixel entre apertar e soltar.
+			setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+			addMouseListener(new MouseAdapter()
 			{
 				@Override
-				public void mouseClicked(MouseEvent e)
+				public void mousePressed(MouseEvent e)
 				{
-					setExpanded(!expanded);
+					if (javax.swing.SwingUtilities.isLeftMouseButton(e))
+					{
+						setExpanded(!expanded);
+					}
 				}
 			});
 			add(Box.createVerticalStrut(2));
