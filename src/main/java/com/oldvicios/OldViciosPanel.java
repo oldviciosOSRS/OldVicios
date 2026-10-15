@@ -43,7 +43,7 @@ class OldViciosPanel extends PluginPanel
 	static final java.awt.Color YELLOW = new java.awt.Color(0xECE65C);
 
 	private static final int LOGO_WIDTH = 56;
-	private static final int WELCOME_LOGO_WIDTH = 96;
+	private static final int WELCOME_LOGO_WIDTH = 128;
 	private static final String WELCOME_CARD = "welcome";
 	private static final String CLAN_CARD = "clan";
 	private static final int LINK_ICON_SIZE = 16;
@@ -96,21 +96,21 @@ class OldViciosPanel extends PluginPanel
 		box.add(Box.createVerticalStrut(10));
 
 		JLabel title = new JLabel("OldVicios");
-		title.setFont(FontManager.getRunescapeBoldFont());
+		title.setFont(FontManager.getRunescapeBoldFont().deriveFont(24f));
 		title.setForeground(YELLOW);
 		title.setAlignmentX(Component.CENTER_ALIGNMENT);
 		box.add(title);
 		box.add(Box.createVerticalStrut(8));
 
 		JLabel description = new JLabel(centered("A maior comunidade brasileira de Old School RuneScape."));
-		description.setFont(FontManager.getRunescapeSmallFont());
-		description.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		description.setFont(FontManager.getRunescapeFont());
+		description.setForeground(java.awt.Color.WHITE);
 		description.setAlignmentX(Component.CENTER_ALIGNMENT);
 		box.add(description);
 		box.add(Box.createVerticalStrut(16));
 
 		welcomeMessage.setFont(FontManager.getRunescapeSmallFont());
-		welcomeMessage.setForeground(java.awt.Color.WHITE);
+		welcomeMessage.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		welcomeMessage.setAlignmentX(Component.CENTER_ALIGNMENT);
 		box.add(welcomeMessage);
 
