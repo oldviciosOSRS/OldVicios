@@ -12,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
@@ -37,6 +39,7 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.Text;
 import net.runelite.http.api.loottracker.LootRecordType;
 
 @Slf4j
@@ -61,6 +64,12 @@ public class OldViciosPlugin extends Plugin
 
 	private static final String PET_FOLLOWING = "You have a funny feeling like you're being followed.";
 	private static final String PET_BACKPACK = "You feel something weird sneaking into your backpack.";
+
+	// "Your Maggot King kill count is: 149." / "Your completed Chambers of Xeric count is: 50."
+	static final Pattern KILL_COUNT = Pattern.compile(
+		"^Your (?:completed )?(?<name>.+?) (?:kill |chest |completion |harvest |lap |success )?count is: (?<kc>[\\d,]+)");
+	// A mensagem de KC chega logo antes do drop
+	private static final int KILL_COUNT_MAX_AGE_TICKS = 5;
 
 	private static final long DEFAULT_MIN_LOOT_VALUE = 3_000_000L;
 
@@ -94,6 +103,8 @@ public class OldViciosPlugin extends Plugin
 	private boolean authPending;
 	private String accountId;
 	private volatile long minLootValue = DEFAULT_MIN_LOOT_VALUE;
+	private int lastKillCount;
+	private int lastKillCountTick = -1;
 
 	@Override
 	protected void startUp()
@@ -218,11 +229,24 @@ public class OldViciosPlugin extends Plugin
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
-		if (event.getType() != ChatMessageType.GAMEMESSAGE || !config.sendDrops() || !canSubmit())
+		if (event.getType() != ChatMessageType.GAMEMESSAGE)
 		{
 			return;
 		}
-		String message = event.getMessage();
+		String message = Text.removeTags(event.getMessage());
+
+		Matcher kc = KILL_COUNT.matcher(message);
+		if (kc.find())
+		{
+			lastKillCount = Integer.parseInt(kc.group("kc").replace(",", ""));
+			lastKillCountTick = client.getTickCount();
+			return;
+		}
+
+		if (!config.sendDrops() || !canSubmit())
+		{
+			return;
+		}
 		if (PET_FOLLOWING.equals(message) || PET_BACKPACK.equals(message))
 		{
 			JsonObject payload = new JsonObject();
@@ -263,14 +287,15 @@ public class OldViciosPlugin extends Plugin
 			quantities.computeIfAbsent(id, k -> new int[1])[0] += stack.getQuantity();
 		}
 
-		long total = 0;
+		// Igual ao Dink (e ao backend): só vale se algum item, sozinho, atingir o mínimo
+		long highestStack = 0;
 		JsonArray items = new JsonArray();
 		for (Map.Entry<Integer, int[]> entry : quantities.entrySet())
 		{
 			int id = entry.getKey();
 			int quantity = entry.getValue()[0];
 			long price = itemManager.getItemPrice(id);
-			total += price * quantity;
+			highestStack = Math.max(highestStack, price * quantity);
 
 			JsonObject item = new JsonObject();
 			item.addProperty("id", id);
@@ -280,7 +305,7 @@ public class OldViciosPlugin extends Plugin
 			items.add(item);
 		}
 
-		if (total < minLootValue)
+		if (highestStack < minLootValue)
 		{
 			return;
 		}
@@ -294,6 +319,12 @@ public class OldViciosPlugin extends Plugin
 			payload.addProperty("source", source);
 		}
 		payload.add("items", items);
+		payload.addProperty("world", client.getWorld());
+		payload.addProperty("template", config.lootMessage());
+		if (!pk && lastKillCountTick >= 0 && client.getTickCount() - lastKillCountTick <= KILL_COUNT_MAX_AGE_TICKS)
+		{
+			payload.addProperty("killCount", lastKillCount);
+		}
 		submitWithScreenshot(payload, pk ? "Loot PK enviado ao Discord do OldVicios!" : "Drop enviado ao Discord do OldVicios!");
 	}
 
