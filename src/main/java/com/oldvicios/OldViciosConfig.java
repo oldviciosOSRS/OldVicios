@@ -5,6 +5,7 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Notification;
+import net.runelite.client.config.Range;
 
 @ConfigGroup(OldViciosConfig.GROUP)
 public interface OldViciosConfig extends Config
@@ -12,6 +13,18 @@ public interface OldViciosConfig extends Config
 	String GROUP = "oldvicios";
 
 	String DEFAULT_LOOT_MESSAGE = "%USERNAME% has looted: \n\n%LOOT%\nFrom: %SOURCE%";
+
+	@ConfigItem(
+		keyName = "sidebarPriority",
+		name = "Posição na barra lateral",
+		description = "Posição do ícone do OldVicios na barra lateral do RuneLite. Quanto menor, mais pra cima",
+		position = -1
+	)
+	@Range(min = -10, max = 100)
+	default int sidebarPriority()
+	{
+		return 1;
+	}
 
 	@ConfigSection(
 		name = "Drops",

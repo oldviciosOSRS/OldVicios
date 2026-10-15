@@ -38,6 +38,7 @@ import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.PlayerLootReceived;
 import net.runelite.client.game.ItemManager;
@@ -134,13 +135,7 @@ public class OldViciosPlugin extends Plugin
 	protected void startUp()
 	{
 		panel = new OldViciosPanel(this::loadImage);
-		navButton = NavigationButton.builder()
-			.tooltip("OldVicios")
-			.icon(icon())
-			.priority(7)
-			.panel(panel)
-			.build();
-		clientToolbar.addNavigation(navButton);
+		addNavigationButton();
 		contentRefresh = executor.scheduleWithFixedDelay(this::refreshContent, 0, CONTENT_REFRESH_MINUTES, TimeUnit.MINUTES);
 		updatesPoll = executor.scheduleWithFixedDelay(this::pollUpdates, 0, UPDATES_POLL_SECONDS, TimeUnit.SECONDS);
 
@@ -174,6 +169,28 @@ public class OldViciosPlugin extends Plugin
 		imageCache.clear();
 		authPending = false;
 		accountId = null;
+	}
+
+	private void addNavigationButton()
+	{
+		navButton = NavigationButton.builder()
+			.tooltip("OldVicios")
+			.icon(icon())
+			.priority(config.sidebarPriority())
+			.panel(panel)
+			.build();
+		clientToolbar.addNavigation(navButton);
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		// Move o ícone na barra lateral na hora, sem reiniciar o plugin
+		if (OldViciosConfig.GROUP.equals(event.getGroup()) && "sidebarPriority".equals(event.getKey()) && navButton != null)
+		{
+			clientToolbar.removeNavigation(navButton);
+			addNavigationButton();
+		}
 	}
 
 	@Subscribe
