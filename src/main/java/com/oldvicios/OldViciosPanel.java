@@ -2,6 +2,9 @@ package com.oldvicios;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.GridBagLayout;
@@ -26,6 +29,7 @@ import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.LinkBrowser;
 
 /**
  * Painel lateral: cabeçalho (logo do OV + status da conexão) e abas Avisos/Eventos com cards.
@@ -34,6 +38,9 @@ import net.runelite.client.util.ImageUtil;
 class OldViciosPanel extends PluginPanel
 {
 	private static final int LOGO_WIDTH = 56;
+	private static final int LINK_ICON_SIZE = 16;
+	private static final String SITE_URL = "https://oldvicios.com.br";
+	private static final String DISCORD_URL = "https://discord.gg/GV5qbrGyAA";
 
 	private final JLabel status = new JLabel();
 	private final JPanel noticesList = cardList();
@@ -73,6 +80,7 @@ class OldViciosPanel extends PluginPanel
 		content.add(tabs, BorderLayout.NORTH);
 		content.add(display, BorderLayout.CENTER);
 		add(content, BorderLayout.CENTER);
+		add(footer(), BorderLayout.SOUTH);
 
 		setStatus("Entre no jogo para conectar");
 		showMessage(noticesList, "Carregando...");
@@ -95,6 +103,49 @@ class OldViciosPanel extends PluginPanel
 		row.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 4));
 		row.add(button, BorderLayout.EAST);
 		return row;
+	}
+
+	/** Rodapé com os links do site e do Discord (ícone + nome, clicáveis). */
+	private static JPanel footer()
+	{
+		JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 6));
+		footer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		footer.add(link("site.png", "Site", SITE_URL));
+		footer.add(link("discord.png", "Discord", DISCORD_URL));
+		return footer;
+	}
+
+	private static JLabel link(String icon, String text, String url)
+	{
+		BufferedImage image = ImageUtil.loadImageResource(OldViciosPanel.class, icon);
+		int height = Math.round(image.getHeight() * (LINK_ICON_SIZE / (float) image.getWidth()));
+		JLabel label = new JLabel(text, new ImageIcon(ImageUtil.resizeImage(image, LINK_ICON_SIZE, height)), SwingConstants.LEFT);
+		label.setFont(FontManager.getRunescapeSmallFont());
+		label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		label.setIconTextGap(4);
+		label.setToolTipText(url);
+		label.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+		label.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				LinkBrowser.browse(url);
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				label.setForeground(ColorScheme.BRAND_ORANGE);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+			}
+		});
+		return label;
 	}
 
 	private JPanel header()
