@@ -305,7 +305,8 @@ public class OldViciosPlugin extends Plugin
 			items.add(item);
 		}
 
-		if (highestStack < minLootValue)
+		// Loot PK não tem mínimo
+		if (!pk && highestStack < minLootValue)
 		{
 			return;
 		}
