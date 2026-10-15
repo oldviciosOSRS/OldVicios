@@ -334,6 +334,10 @@ public class OldViciosPlugin extends Plugin
 
 	private static String authErrorMessage(OldViciosApi.Result result)
 	{
+		if (result.status == 403 && "beta_only".equals(result.error))
+		{
+			return "O plugin está em fase de testes com a staff. Em breve para todo o clã!";
+		}
 		if (result.status == 403 && "blocked".equals(result.error))
 		{
 			return "Acesso bloqueado pela staff";
