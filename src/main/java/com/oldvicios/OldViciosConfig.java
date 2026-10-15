@@ -23,8 +23,8 @@ public interface OldViciosConfig extends Config
 
 	@ConfigItem(
 		keyName = "sidebarPriority",
-		name = "Posição na barra lateral",
-		description = "Posição do ícone do OldVicios na barra lateral do RuneLite. Quanto menor, mais pra cima",
+		name = "Posição na sidebar",
+		description = "Posição do ícone do OldVicios na sidebar do RuneLite. Quanto menor, mais pra cima",
 		section = generalSection,
 		position = 0
 	)
