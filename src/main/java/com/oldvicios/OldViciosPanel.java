@@ -39,8 +39,8 @@ import net.runelite.client.util.LinkBrowser;
  */
 class OldViciosPanel extends PluginPanel
 {
-	// Amarelo do OV: o mesmo dos embeds de drop no Discord, combina com o dourado do logo
-	static final java.awt.Color YELLOW = new java.awt.Color(0xF1C40F);
+	// Amarelo do OV: tom das letras do logo (miolo das letras do favicon do site)
+	static final java.awt.Color YELLOW = new java.awt.Color(0xECE65C);
 
 	private static final int LOGO_WIDTH = 56;
 	private static final int WELCOME_LOGO_WIDTH = 96;
