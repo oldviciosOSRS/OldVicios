@@ -41,6 +41,7 @@ class OldViciosPanel extends PluginPanel
 	private static final int LINK_ICON_SIZE = 16;
 	private static final String SITE_URL = "https://oldvicios.com.br";
 	private static final String DISCORD_URL = "https://discord.gg/GV5qbrGyAA";
+	private static final String WOM_URL = "https://wiseoldman.net/groups/715";
 
 	private final JLabel status = new JLabel();
 	private final JPanel noticesList = cardList();
@@ -105,13 +106,14 @@ class OldViciosPanel extends PluginPanel
 		return row;
 	}
 
-	/** Rodapé com os links do site e do Discord (ícone + nome, clicáveis). */
+	/** Rodapé com os links do site, Discord e WOM (ícone + nome, clicáveis). */
 	private static JPanel footer()
 	{
-		JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 6));
+		JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
 		footer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		footer.add(link("site.png", "Site", SITE_URL));
 		footer.add(link("discord.png", "Discord", DISCORD_URL));
+		footer.add(link("wom.png", "WOM", WOM_URL));
 		return footer;
 	}
 
