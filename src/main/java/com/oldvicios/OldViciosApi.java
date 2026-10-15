@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.CacheControl;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -123,7 +124,7 @@ class OldViciosApi
 	/** Lista de cards de uma aba ("notices" ou "events"). Lista vazia em caso de erro. */
 	void fetchCards(String tab, Consumer<List<ContentCard>> callback)
 	{
-		Request request = new Request.Builder().url(BASE_URL + "/" + tab).get().build();
+		Request request = new Request.Builder().url(BASE_URL + "/" + tab).cacheControl(CacheControl.FORCE_NETWORK).get().build();
 		send(request, result ->
 		{
 			if (result.status != 200 || result.dataArray == null)
@@ -142,7 +143,7 @@ class OldViciosApi
 	void fetchUpdates(String accountId, Integer since, Consumer<Result> callback)
 	{
 		String url = BASE_URL + "/updates" + (since != null ? "?since=" + since : "");
-		Request.Builder request = new Request.Builder().url(url).get();
+		Request.Builder request = new Request.Builder().url(url).cacheControl(CacheControl.FORCE_NETWORK).get();
 		if (accountId != null)
 		{
 			request.header("X-OV-Account", accountId);
