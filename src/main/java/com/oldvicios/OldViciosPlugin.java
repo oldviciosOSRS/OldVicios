@@ -340,7 +340,7 @@ public class OldViciosPlugin extends Plugin
 		}
 		if (result.status == 403)
 		{
-			return "Personagem não encontrado no grupo do OldVicios (WOM)";
+			return "Esta conta não está associada ao clã OldVicios (WOM)";
 		}
 		if (result.status == 409)
 		{
@@ -631,7 +631,7 @@ public class OldViciosPlugin extends Plugin
 	{
 		return config.hasConnected()
 			? "Faça login no RuneScape para acessar o conteúdo do clã."
-			: "Entre no jogo com seu personagem do clã para conectar.";
+			: "Entre no jogo com a sua conta associada ao clã para conectar.";
 	}
 
 	private void showWelcome(String text)

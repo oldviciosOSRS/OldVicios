@@ -17,7 +17,7 @@ Plugin oficial do clã **OldVicios** para o RuneLite.
 Este plugin se comunica com o servidor do OldVicios assim que é instalado. Ele envia:
 
 - seu endereço IP (como qualquer requisição de rede);
-- o nome do seu personagem;
+- o nome da sua conta no jogo;
 - um identificador anônimo da conta (hash do `accountHash` do RuneLite), usado para reconhecer sua conta mesmo após troca de nick;
 - seus drops e pets (item, valor e uma captura de tela), se **Enviar drops** estiver ativo. Drops de PvP só são enviados se você ativar **Enviar drops PK**.
 

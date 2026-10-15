@@ -78,7 +78,7 @@ class OldViciosPanel extends PluginPanel
 		add(center, BorderLayout.CENTER);
 		add(footer(), BorderLayout.SOUTH);
 
-		showWelcome("Entre no jogo com seu personagem do clã para conectar.");
+		showWelcome("Entre no jogo com a sua conta associada ao clã para conectar.");
 	}
 
 	/** Tela de deslogado / sem acesso: logo e nome centralizados, descrição do clã e o motivo. */
