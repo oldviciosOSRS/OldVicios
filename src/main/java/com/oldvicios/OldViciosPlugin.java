@@ -340,7 +340,7 @@ public class OldViciosPlugin extends Plugin
 		}
 		if (result.status == 403)
 		{
-			return "Esta conta não está associada ao clã OldVicios (WOM)";
+			return "Esta conta não está associada ao clã OldVicios";
 		}
 		if (result.status == 409)
 		{
