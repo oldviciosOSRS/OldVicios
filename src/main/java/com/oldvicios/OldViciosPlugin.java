@@ -27,6 +27,10 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.WorldType;
+import net.runelite.api.clan.ClanMember;
+import net.runelite.api.clan.ClanSettings;
+import net.runelite.api.clan.ClanTitle;
+import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -35,6 +39,7 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -116,6 +121,9 @@ public class OldViciosPlugin extends Plugin
 	@Inject
 	private ChatMessageManager chatMessageManager;
 
+	@Inject
+	private ChatIconManager chatIconManager;
+
 	private OldViciosPanel panel;
 	private NavigationButton navButton;
 	private ScheduledFuture<?> contentRefresh;
@@ -126,6 +134,9 @@ public class OldViciosPlugin extends Plugin
 	private final Map<String, BufferedImage> imageCache = new ConcurrentHashMap<>();
 
 	private boolean authPending;
+	// Nick conectado; o cabeçalho mostra "[cargo no CC] nick" assim que o clã carregar
+	private volatile String connectedName;
+	private boolean headerPending;
 	private String accountId;
 	private volatile long minLootValue = DEFAULT_MIN_LOOT_VALUE;
 	private int lastKillCount;
@@ -202,6 +213,8 @@ public class OldViciosPlugin extends Plugin
 		}
 		else if (event.getGameState() == GameState.LOGIN_SCREEN)
 		{
+			connectedName = null;
+			headerPending = false;
 			authPending = false;
 			accountId = null;
 			setStatus("Entre no jogo para conectar");
@@ -209,8 +222,44 @@ public class OldViciosPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onClanChannelChanged(ClanChannelChanged event)
+	{
+		if (connectedName != null)
+		{
+			updateHeader();
+		}
+	}
+
+	/** Cabeçalho "[ícone do cargo no CC] nick". Roda na client thread; tenta de novo se o clã não carregou. */
+	private void updateHeader()
+	{
+		String name = connectedName;
+		if (name == null)
+		{
+			return;
+		}
+		ClanSettings settings = client.getClanSettings();
+		ClanMember member = settings != null ? settings.findMember(name) : null;
+		ClanTitle title = member != null ? settings.titleForRank(member.getRank()) : null;
+		if (title == null)
+		{
+			headerPending = true;
+			onPanel(p -> p.setPlayer(null, null, name));
+			return;
+		}
+		BufferedImage icon = chatIconManager.getRankImage(title);
+		headerPending = icon == null;
+		onPanel(p -> p.setPlayer(icon, title.getName(), name));
+	}
+
+	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		if (headerPending && client.getTickCount() % 5 == 0)
+		{
+			updateHeader();
+		}
+
 		// O accountHash e o nome só ficam disponíveis alguns ticks depois do login
 		if (!authPending || client.getAccountHash() == -1 || client.getLocalPlayer() == null
 			|| client.getLocalPlayer().getName() == null)
@@ -233,7 +282,8 @@ public class OldViciosPlugin extends Plugin
 				{
 					minLootValue = result.data.get("minLootValue").getAsLong();
 				}
-				setStatus("Conectado como " + result.data.get("playerName").getAsString());
+				connectedName = result.data.get("playerName").getAsString();
+				clientThread.invokeLater(this::updateHeader);
 				return;
 			}
 			setStatus(authErrorMessage(result));

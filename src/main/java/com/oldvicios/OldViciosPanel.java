@@ -125,8 +125,23 @@ class OldViciosPanel extends PluginPanel
 		return scroll;
 	}
 
+	/** "[ícone do cargo] nick", como no Clan Chat. Sem ícone, mostra o nome do cargo em texto. */
+	void setPlayer(BufferedImage rankIcon, String rankName, String name)
+	{
+		status.setIcon(rankIcon != null ? new ImageIcon(rankIcon) : null);
+		status.setToolTipText(rankName);
+		String text = rankIcon == null && rankName != null ? rankName + " " + name : name;
+		status.setText(CardPanel.escape(text));
+		status.setForeground(java.awt.Color.WHITE);
+		status.setFont(FontManager.getRunescapeBoldFont());
+	}
+
 	void setStatus(String text)
 	{
+		status.setIcon(null);
+		status.setToolTipText(null);
+		status.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		status.setFont(FontManager.getRunescapeSmallFont());
 		status.setText("<html><div style='text-align:center;width:180px'>" + CardPanel.escape(text) + "</div></html>");
 	}
 
