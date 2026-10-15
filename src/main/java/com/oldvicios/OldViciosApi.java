@@ -121,21 +121,33 @@ class OldViciosApi
 		send(request, callback);
 	}
 
-	/** Lista de cards de uma aba ("notices" ou "events"). Lista vazia em caso de erro. */
-	void fetchCards(String tab, Consumer<List<ContentCard>> callback)
+	/**
+	 * Lista de cards de uma aba ("notices" ou "events"). Exige a conta conectada e ainda no clã:
+	 * 401/403 chama onDenied (o painel limpa o conteúdo); outros erros mantêm o que já está na tela.
+	 */
+	void fetchCards(String tab, String accountId, Consumer<List<ContentCard>> onSuccess, Runnable onDenied)
 	{
-		Request request = new Request.Builder().url(BASE_URL + "/" + tab).cacheControl(CacheControl.FORCE_NETWORK).get().build();
+		Request request = new Request.Builder()
+			.url(BASE_URL + "/" + tab)
+			.header("X-OV-Account", accountId)
+			.cacheControl(CacheControl.FORCE_NETWORK)
+			.get()
+			.build();
 		send(request, result ->
 		{
+			if (result.status == 401 || result.status == 403)
+			{
+				onDenied.run();
+				return;
+			}
 			if (result.status != 200 || result.dataArray == null)
 			{
-				callback.accept(Collections.emptyList());
 				return;
 			}
 			List<ContentCard> cards = gson.fromJson(result.dataArray, new TypeToken<List<ContentCard>>()
 			{
 			}.getType());
-			callback.accept(cards != null ? cards : Collections.emptyList());
+			onSuccess.accept(cards != null ? cards : Collections.emptyList());
 		});
 	}
 

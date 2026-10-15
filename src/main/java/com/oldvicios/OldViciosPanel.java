@@ -39,6 +39,7 @@ class OldViciosPanel extends PluginPanel
 {
 	private static final int LOGO_WIDTH = 56;
 	private static final int LINK_ICON_SIZE = 16;
+	static final String LOCKED_MESSAGE = "<html><div style='text-align:center'>Entre no jogo com um personagem<br>do clã para ver o conteúdo</div></html>";
 	private static final String SITE_URL = "https://oldvicios.com.br";
 	private static final String DISCORD_URL = "https://discord.gg/GV5qbrGyAA";
 	private static final String WOM_URL = "https://wiseoldman.net/groups/715";
@@ -84,8 +85,7 @@ class OldViciosPanel extends PluginPanel
 		add(footer(), BorderLayout.SOUTH);
 
 		setStatus("Entre no jogo para conectar");
-		showMessage(noticesList, "Carregando...");
-		showMessage(eventsList, "Carregando...");
+		lockContent(LOCKED_MESSAGE);
 	}
 
 	/** Engrenagem no canto superior direito que abre as configurações do plugin. */
@@ -229,6 +229,13 @@ class OldViciosPanel extends PluginPanel
 	void setEvents(List<ContentCard> cards)
 	{
 		fill(eventsList, cards, CardPanel.Kind.EVENT, "Nenhum evento agendado");
+	}
+
+	/** Tira o conteúdo do clã da tela (deslogado, fora do clã ou bloqueado). */
+	void lockContent(String reason)
+	{
+		showMessage(noticesList, reason);
+		showMessage(eventsList, reason);
 	}
 
 	private void fill(JPanel list, List<ContentCard> cards, CardPanel.Kind kind, String emptyMessage)

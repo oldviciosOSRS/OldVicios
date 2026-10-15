@@ -93,6 +93,7 @@ public class OldViciosPlugin extends Plugin
 	private static final int KILL_COUNT_MAX_AGE_TICKS = 5;
 
 	private static final long DEFAULT_MIN_LOOT_VALUE = 3_000_000L;
+	private static final String CLAN_NAME = "oldvicios";
 	private static final long CONTENT_REFRESH_MINUTES = 5;
 	private static final long UPDATES_POLL_SECONDS = 45;
 
@@ -145,6 +146,8 @@ public class OldViciosPlugin extends Plugin
 	// Nick conectado; o cabeçalho mostra "[cargo no CC] nick" assim que o clã carregar
 	private volatile String connectedName;
 	private boolean headerPending;
+	// Conectado ao backend E (se o clã do jogo já carregou) no clã OldVicios. Sem isso, nada do clã aparece.
+	private volatile boolean connected;
 	private String accountId;
 	private volatile long minLootValue = DEFAULT_MIN_LOOT_VALUE;
 	private int lastKillCount;
@@ -242,7 +245,8 @@ public class OldViciosPlugin extends Plugin
 			headerPending = false;
 			authPending = false;
 			accountId = null;
-			setStatus("Entre no jogo para conectar");
+			updatesCursor = null;
+			disconnect("Entre no jogo para conectar");
 		}
 	}
 
@@ -264,6 +268,13 @@ public class OldViciosPlugin extends Plugin
 			return;
 		}
 		ClanSettings settings = client.getClanSettings();
+		// Checagem extra do lado do jogo (a de verdade é no servidor, pelo WOM)
+		if (settings != null && settings.getName() != null
+			&& !CLAN_NAME.equals(settings.getName().replaceAll("[^A-Za-z0-9]", "").toLowerCase()))
+		{
+			disconnect("Você não está no clã OldVicios");
+			return;
+		}
 		ClanMember member = settings != null ? settings.findMember(name) : null;
 		ClanTitle title = member != null ? settings.titleForRank(member.getRank()) : null;
 		if (title == null)
@@ -308,15 +319,21 @@ public class OldViciosPlugin extends Plugin
 					minLootValue = result.data.get("minLootValue").getAsLong();
 				}
 				connectedName = result.data.get("playerName").getAsString();
+				connected = true;
 				clientThread.invokeLater(this::updateHeader);
+				refreshContent();
 				return;
 			}
-			setStatus(authErrorMessage(result));
+			disconnect(authErrorMessage(result));
 		});
 	}
 
 	private static String authErrorMessage(OldViciosApi.Result result)
 	{
+		if (result.status == 403 && "blocked".equals(result.error))
+		{
+			return "Acesso bloqueado pela staff";
+		}
 		if (result.status == 403)
 		{
 			return "Personagem não encontrado no grupo do OldVicios (WOM)";
@@ -495,17 +512,43 @@ public class OldViciosPlugin extends Plugin
 		}
 	}
 
+	/** Tira o acesso ao conteúdo do clã e mostra o motivo no cabeçalho. */
+	private void disconnect(String reason)
+	{
+		connected = false;
+		connectedName = null;
+		headerPending = false;
+		setStatus(reason);
+		onPanel(p -> p.lockContent(OldViciosPanel.LOCKED_MESSAGE));
+	}
+
 	private void refreshContent()
 	{
-		api.fetchCards("notices", cards -> onPanel(p -> p.setNotices(cards)));
-		api.fetchCards("events", cards -> onPanel(p -> p.setEvents(cards)));
+		String id = accountId;
+		if (!connected || id == null)
+		{
+			return;
+		}
+		Runnable denied = () -> disconnect("Seu acesso ao conteúdo do clã foi removido");
+		api.fetchCards("notices", id, cards -> onPanel(p -> p.setNotices(cards)), denied);
+		api.fetchCards("events", id, cards -> onPanel(p -> p.setEvents(cards)), denied);
 	}
 
 	private void pollUpdates()
 	{
-		Integer since = updatesCursor;
-		api.fetchUpdates(accountId, since, result ->
+		String id = accountId;
+		if (!connected || id == null)
 		{
+			return;
+		}
+		Integer since = updatesCursor;
+		api.fetchUpdates(id, since, result ->
+		{
+			if (result.status == 401 || result.status == 403)
+			{
+				disconnect("Seu acesso ao conteúdo do clã foi removido");
+				return;
+			}
 			if (!result.ok())
 			{
 				return;
