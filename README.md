@@ -1,24 +1,23 @@
 # OldVicios
 
-Plugin oficial do clã **Old Vicios** para o RuneLite.
+Plugin oficial do clã **OldVicios** para o RuneLite.
 
 > Em desenvolvimento.
 
 ## Funções
 
 - Envio de drops e pets para o Discord do clã
+- Envio de drops PK para o canal de PK (opcional, ative em **Enviar drops PK**)
 - PBs do clã (em breve)
 
 ## Privacidade
 
-Todas as funções online vêm **desativadas por padrão** e só funcionam depois que você ativa **Conectar ao Old Vicios** nas configurações.
-
-Com a conexão ativa, o plugin envia ao servidor do Old Vicios:
+Este plugin se comunica com o servidor do OldVicios assim que é instalado. Ele envia:
 
 - seu endereço IP (como qualquer requisição de rede);
 - o nome do seu personagem;
 - um identificador anônimo da conta (hash do `accountHash` do RuneLite), usado para reconhecer sua conta mesmo após troca de nick;
-- os dados das funções que você ativar (por exemplo, o item, o valor e uma captura de tela do drop).
+- seus drops e pets (item, valor e uma captura de tela). Drops de PvP só são enviados se você ativar **Enviar drops PK**.
 
 O plugin não coleta credenciais nem dados de outros jogadores.
 

@@ -10,7 +10,6 @@ import net.runelite.api.GameState;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -20,8 +19,8 @@ import net.runelite.client.util.ImageUtil;
 @Slf4j
 @PluginDescriptor(
 	name = "OldVicios",
-	description = "Plugin oficial do clã Old Vicios",
-	tags = {"clan", "old vicios", "discord", "drops", "pets"}
+	description = "Plugin oficial do clã OldVicios",
+	tags = {"clan", "oldvicios", "discord", "drops", "pets", "pk"}
 )
 public class OldViciosPlugin extends Plugin
 {
@@ -42,7 +41,7 @@ public class OldViciosPlugin extends Plugin
 	{
 		panel = new OldViciosPanel();
 		navButton = NavigationButton.builder()
-			.tooltip("Old Vicios")
+			.tooltip("OldVicios")
 			.icon(icon())
 			.priority(7)
 			.panel(panel)
@@ -68,31 +67,12 @@ public class OldViciosPlugin extends Plugin
 		}
 	}
 
-	@Subscribe
-	public void onConfigChanged(ConfigChanged event)
-	{
-		if (OldViciosConfig.GROUP.equals(event.getGroup()))
-		{
-			updateStatus();
-		}
-	}
-
 	private void updateStatus()
 	{
-		String text;
-		if (!config.connect())
-		{
-			text = "Desconectado";
-		}
-		else if (client.getGameState() != GameState.LOGGED_IN)
-		{
-			text = "Entre no jogo para conectar";
-		}
-		else
-		{
-			// TODO: autenticar no backend (accountHash) — próximo passo
-			text = "Conectado (ainda sem servidor)";
-		}
+		// TODO: autenticar no backend (accountHash) — próximo passo
+		String text = client.getGameState() == GameState.LOGGED_IN
+			? "Conectado (ainda sem servidor)"
+			: "Entre no jogo para conectar";
 
 		OldViciosPanel p = panel;
 		if (p != null)
@@ -103,7 +83,7 @@ public class OldViciosPlugin extends Plugin
 
 	private static BufferedImage icon()
 	{
-		// TODO: trocar pelo ícone do Old Vicios
+		// TODO: trocar pelo ícone do OldVicios
 		return ImageUtil.loadImageResource(OldViciosPlugin.class, "icon.png");
 	}
 

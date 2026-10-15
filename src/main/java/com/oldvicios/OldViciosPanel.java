@@ -16,14 +16,14 @@ class OldViciosPanel extends PluginPanel
 		setLayout(new BorderLayout());
 		setBorder(new EmptyBorder(10, 10, 10, 10));
 
-		JLabel title = new JLabel("Old Vicios", SwingConstants.CENTER);
+		JLabel title = new JLabel("OldVicios", SwingConstants.CENTER);
 		title.setFont(FontManager.getRunescapeBoldFont());
 		add(title, BorderLayout.NORTH);
 
 		status.setHorizontalAlignment(SwingConstants.CENTER);
 		add(status, BorderLayout.CENTER);
 
-		setStatus("Desconectado");
+		setStatus("Entre no jogo para conectar");
 	}
 
 	// Must be called on the Swing EDT.
