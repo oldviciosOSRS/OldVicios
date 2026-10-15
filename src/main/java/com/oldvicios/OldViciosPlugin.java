@@ -11,6 +11,10 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,6 +76,7 @@ public class OldViciosPlugin extends Plugin
 	private static final int KILL_COUNT_MAX_AGE_TICKS = 5;
 
 	private static final long DEFAULT_MIN_LOOT_VALUE = 3_000_000L;
+	private static final long CONTENT_REFRESH_MINUTES = 5;
 
 	@Inject
 	private Client client;
@@ -99,6 +104,9 @@ public class OldViciosPlugin extends Plugin
 
 	private OldViciosPanel panel;
 	private NavigationButton navButton;
+	private ScheduledFuture<?> contentRefresh;
+	// Imagens dos cards: baixadas uma vez por sessão
+	private final Map<String, BufferedImage> imageCache = new ConcurrentHashMap<>();
 
 	private boolean authPending;
 	private String accountId;
@@ -109,7 +117,7 @@ public class OldViciosPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		panel = new OldViciosPanel();
+		panel = new OldViciosPanel(this::loadImage);
 		navButton = NavigationButton.builder()
 			.tooltip("OldVicios")
 			.icon(icon())
@@ -117,6 +125,7 @@ public class OldViciosPlugin extends Plugin
 			.panel(panel)
 			.build();
 		clientToolbar.addNavigation(navButton);
+		contentRefresh = executor.scheduleWithFixedDelay(this::refreshContent, 0, CONTENT_REFRESH_MINUTES, TimeUnit.MINUTES);
 
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
@@ -131,9 +140,15 @@ public class OldViciosPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		if (contentRefresh != null)
+		{
+			contentRefresh.cancel(false);
+			contentRefresh = null;
+		}
 		clientToolbar.removeNavigation(navButton);
 		navButton = null;
 		panel = null;
+		imageCache.clear();
 		authPending = false;
 		accountId = null;
 	}
@@ -362,6 +377,40 @@ public class OldViciosPlugin extends Plugin
 		{
 			log.debug("OldVicios screenshot encode failed", e);
 			return null;
+		}
+	}
+
+	private void refreshContent()
+	{
+		api.fetchCards("notices", cards -> onPanel(p -> p.setNotices(cards)));
+		api.fetchCards("events", cards -> onPanel(p -> p.setEvents(cards)));
+	}
+
+	/** Entrega a imagem na EDT, do cache ou baixando. */
+	private void loadImage(String url, Consumer<BufferedImage> callback)
+	{
+		BufferedImage cached = imageCache.get(url);
+		if (cached != null)
+		{
+			callback.accept(cached);
+			return;
+		}
+		api.fetchImage(url, image ->
+		{
+			if (image != null)
+			{
+				imageCache.put(url, image);
+				SwingUtilities.invokeLater(() -> callback.accept(image));
+			}
+		});
+	}
+
+	private void onPanel(Consumer<OldViciosPanel> action)
+	{
+		OldViciosPanel p = panel;
+		if (p != null)
+		{
+			SwingUtilities.invokeLater(() -> action.accept(p));
 		}
 	}
 

@@ -1,7 +1,14 @@
 package com.oldvicios;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
+import javax.imageio.ImageIO;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -67,12 +74,14 @@ class OldViciosApi
 	{
 		final int status;
 		final JsonObject data;
+		final JsonArray dataArray;
 		final String error;
 
-		Result(int status, JsonObject data, String error)
+		Result(int status, JsonObject data, JsonArray dataArray, String error)
 		{
 			this.status = status;
 			this.data = data;
+			this.dataArray = dataArray;
 			this.error = error;
 		}
 
@@ -111,6 +120,53 @@ class OldViciosApi
 		send(request, callback);
 	}
 
+	/** Lista de cards de uma aba ("notices" ou "events"). Lista vazia em caso de erro. */
+	void fetchCards(String tab, Consumer<List<ContentCard>> callback)
+	{
+		Request request = new Request.Builder().url(BASE_URL + "/" + tab).get().build();
+		send(request, result ->
+		{
+			if (result.status != 200 || result.dataArray == null)
+			{
+				callback.accept(Collections.emptyList());
+				return;
+			}
+			List<ContentCard> cards = gson.fromJson(result.dataArray, new TypeToken<List<ContentCard>>()
+			{
+			}.getType());
+			callback.accept(cards != null ? cards : Collections.emptyList());
+		});
+	}
+
+	/** Baixa uma imagem (fora da client thread). null em caso de erro. */
+	void fetchImage(String url, Consumer<BufferedImage> callback)
+	{
+		Request request = new Request.Builder().url(url).get().build();
+		okHttpClient.newCall(request).enqueue(new Callback()
+		{
+			@Override
+			public void onFailure(Call call, IOException e)
+			{
+				log.debug("OldVicios image download failed: {}", url, e);
+				callback.accept(null);
+			}
+
+			@Override
+			public void onResponse(Call call, Response response)
+			{
+				try (ResponseBody body = response.body(); InputStream in = body == null ? null : body.byteStream())
+				{
+					callback.accept(response.isSuccessful() && in != null ? ImageIO.read(in) : null);
+				}
+				catch (IOException e)
+				{
+					log.debug("OldVicios image decode failed: {}", url, e);
+					callback.accept(null);
+				}
+			}
+		});
+	}
+
 	private void send(Request request, Consumer<Result> callback)
 	{
 		okHttpClient.newCall(request).enqueue(new Callback()
@@ -119,7 +175,7 @@ class OldViciosApi
 			public void onFailure(Call call, IOException e)
 			{
 				log.debug("OldVicios API request failed: {}", request.url(), e);
-				callback.accept(new Result(0, null, "network_error"));
+				callback.accept(new Result(0, null, null, "network_error"));
 			}
 
 			@Override
@@ -130,13 +186,16 @@ class OldViciosApi
 					JsonObject json = responseBody == null ? null : gson.fromJson(responseBody.charStream(), JsonObject.class);
 					JsonObject data = json != null && json.has("data") && json.get("data").isJsonObject()
 						? json.getAsJsonObject("data") : null;
-					String error = json != null && json.has("error") ? json.get("error").getAsString() : null;
-					callback.accept(new Result(response.code(), data, error));
+					JsonArray dataArray = json != null && json.has("data") && json.get("data").isJsonArray()
+						? json.getAsJsonArray("data") : null;
+					String error = json != null && json.has("error") && !json.get("error").isJsonNull()
+						? json.get("error").getAsString() : null;
+					callback.accept(new Result(response.code(), data, dataArray, error));
 				}
 				catch (Exception e)
 				{
 					log.debug("OldVicios API bad response: {}", request.url(), e);
-					callback.accept(new Result(response.code(), null, "bad_response"));
+					callback.accept(new Result(response.code(), null, null, "bad_response"));
 				}
 			}
 		});
