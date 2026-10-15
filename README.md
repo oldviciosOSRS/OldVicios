@@ -6,7 +6,7 @@ Plugin oficial do clã **OldVicios** para o RuneLite.
 
 ## Funções
 
-- Envio de drops e pets para o Discord do clã
+- Envio de drops e pets para o Discord do clã (desative em **Enviar drops**)
 - Envio de drops PK para o canal de PK (opcional, ative em **Enviar drops PK**)
 - PBs do clã (em breve)
 
@@ -17,7 +17,7 @@ Este plugin se comunica com o servidor do OldVicios assim que é instalado. Ele 
 - seu endereço IP (como qualquer requisição de rede);
 - o nome do seu personagem;
 - um identificador anônimo da conta (hash do `accountHash` do RuneLite), usado para reconhecer sua conta mesmo após troca de nick;
-- seus drops e pets (item, valor e uma captura de tela). Drops de PvP só são enviados se você ativar **Enviar drops PK**.
+- seus drops e pets (item, valor e uma captura de tela), se **Enviar drops** estiver ativo. Drops de PvP só são enviados se você ativar **Enviar drops PK**.
 
 O plugin não coleta credenciais nem dados de outros jogadores.
 
