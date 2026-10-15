@@ -39,6 +39,8 @@ tasks.register('run', JavaExec) {
 	mainClass = pluginMainClass
 
 	jvmArgs "-ea"
+	// macOS: RuneLite subclasses com.apple.eawt classes (same flag the official launcher passes)
+	jvmArgs "--add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED"
 	args "--developer-mode", "--debug"
 }
 
