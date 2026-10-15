@@ -24,6 +24,7 @@ import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
+import net.runelite.api.MenuAction;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.WorldType;
@@ -42,8 +43,10 @@ import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.PlayerLootReceived;
 import net.runelite.client.game.ItemManager;
@@ -54,6 +57,8 @@ import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.loottracker.LootRecordType;
@@ -124,6 +129,9 @@ public class OldViciosPlugin extends Plugin
 	@Inject
 	private ChatIconManager chatIconManager;
 
+	@Inject
+	private EventBus eventBus;
+
 	private OldViciosPanel panel;
 	private NavigationButton navButton;
 	private ScheduledFuture<?> contentRefresh;
@@ -145,7 +153,7 @@ public class OldViciosPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		panel = new OldViciosPanel(this::loadImage);
+		panel = new OldViciosPanel(this::loadImage, this::openConfig);
 		addNavigationButton();
 		contentRefresh = executor.scheduleWithFixedDelay(this::refreshContent, 0, CONTENT_REFRESH_MINUTES, TimeUnit.MINUTES);
 		updatesPoll = executor.scheduleWithFixedDelay(this::pollUpdates, 0, UPDATES_POLL_SECONDS, TimeUnit.SECONDS);
@@ -180,6 +188,23 @@ public class OldViciosPlugin extends Plugin
 		imageCache.clear();
 		authPending = false;
 		accountId = null;
+	}
+
+	/**
+	 * Abre a tela de configuração do plugin. Usa o mesmo evento do "Configure" dos overlays,
+	 * que o ConfigPlugin do RuneLite trata abrindo o painel de config do plugin dono.
+	 */
+	private void openConfig()
+	{
+		Overlay owner = new Overlay(this)
+		{
+			@Override
+			public java.awt.Dimension render(java.awt.Graphics2D graphics)
+			{
+				return null;
+			}
+		};
+		eventBus.post(new OverlayMenuClicked(new OverlayMenuEntry(MenuAction.RUNELITE_OVERLAY_CONFIG, "", ""), owner));
 	}
 
 	private void addNavigationButton()

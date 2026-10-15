@@ -13,6 +13,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -42,7 +43,7 @@ class OldViciosPanel extends PluginPanel
 	/**
 	 * @param imageLoader baixa (ou pega do cache) a imagem de uma URL e chama o callback na EDT
 	 */
-	OldViciosPanel(BiConsumer<String, Consumer<BufferedImage>> imageLoader)
+	OldViciosPanel(BiConsumer<String, Consumer<BufferedImage>> imageLoader, Runnable openConfig)
 	{
 		// false = sem scroll externo; cada aba tem o seu
 		super(false);
@@ -50,7 +51,11 @@ class OldViciosPanel extends PluginPanel
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		add(header(), BorderLayout.NORTH);
+		JPanel top = new JPanel(new BorderLayout());
+		top.setOpaque(false);
+		top.add(configButton(openConfig), BorderLayout.NORTH);
+		top.add(header(), BorderLayout.CENTER);
+		add(top, BorderLayout.NORTH);
 
 		JPanel display = new JPanel(new BorderLayout());
 		display.setOpaque(false);
@@ -74,12 +79,30 @@ class OldViciosPanel extends PluginPanel
 		showMessage(eventsList, "Carregando...");
 	}
 
+	/** Engrenagem no canto superior direito que abre as configurações do plugin. */
+	private static JPanel configButton(Runnable openConfig)
+	{
+		JButton button = new JButton(new ImageIcon(ImageUtil.loadImageResource(OldViciosPanel.class, "config.png")));
+		button.setToolTipText("Configurações do OldVicios");
+		button.setBorderPainted(false);
+		button.setContentAreaFilled(false);
+		button.setFocusPainted(false);
+		button.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+		button.addActionListener(e -> openConfig.run());
+
+		JPanel row = new JPanel(new BorderLayout());
+		row.setOpaque(false);
+		row.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 4));
+		row.add(button, BorderLayout.EAST);
+		return row;
+	}
+
 	private JPanel header()
 	{
 		JPanel header = new JPanel();
 		header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
 		header.setOpaque(false);
-		header.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
+		header.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 
 		BufferedImage logoImage = ImageUtil.loadImageResource(OldViciosPanel.class, "logo.png");
 		int logoHeight = Math.round(logoImage.getHeight() * (LOGO_WIDTH / (float) logoImage.getWidth()));
