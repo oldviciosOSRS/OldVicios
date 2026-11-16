@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.CacheControl;
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
@@ -166,10 +167,24 @@ class OldViciosApi
 		send(request.build(), callback);
 	}
 
-	/** Baixa uma imagem (fora da client thread). null em caso de erro. */
-	void fetchImage(String url, Consumer<BufferedImage> callback)
+	/**
+	 * Baixa a imagem de um card (fora da client thread). null em caso de erro.
+	 * A URL é montada aqui a partir de BASE_URL, nunca recebida do servidor, então o plugin
+	 * só fala com api.oldvicios.com.br.
+	 */
+	void fetchImage(String tab, int cardId, String accountId, Consumer<BufferedImage> callback)
 	{
-		Request request = new Request.Builder().url(url).get().build();
+		HttpUrl url = HttpUrl.get(BASE_URL).newBuilder()
+			.addPathSegment(tab)
+			.addPathSegment(Integer.toString(cardId))
+			.addPathSegment("image")
+			.build();
+		Request request = new Request.Builder()
+			.url(url)
+			.header("X-OV-Account", accountId)
+			.header("X-OV-Version", VERSION)
+			.get()
+			.build();
 		okHttpClient.newCall(request).enqueue(new Callback()
 		{
 			@Override

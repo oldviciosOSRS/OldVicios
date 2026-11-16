@@ -603,20 +603,28 @@ public class OldViciosPlugin extends Plugin
 		});
 	}
 
-	/** Entrega a imagem na EDT, do cache ou baixando. */
-	private void loadImage(String url, Consumer<BufferedImage> callback)
+	/** Entrega a imagem do card na EDT, do cache ou baixando. */
+	private void loadImage(CardPanel.Kind kind, ContentCard card, Consumer<BufferedImage> callback)
 	{
-		BufferedImage cached = imageCache.get(url);
+		String tab = kind == CardPanel.Kind.EVENT ? "events" : "notices";
+		// imageVersion na chave: se a staff trocar a imagem, baixa de novo
+		String key = tab + "/" + card.id + "/" + card.imageVersion;
+		BufferedImage cached = imageCache.get(key);
 		if (cached != null)
 		{
 			callback.accept(cached);
 			return;
 		}
-		api.fetchImage(url, image ->
+		String id = accountId;
+		if (id == null)
+		{
+			return;
+		}
+		api.fetchImage(tab, card.id, id, image ->
 		{
 			if (image != null)
 			{
-				imageCache.put(url, image);
+				imageCache.put(key, image);
 				SwingUtilities.invokeLater(() -> callback.accept(image));
 			}
 		});

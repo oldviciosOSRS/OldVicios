@@ -11,7 +11,6 @@ import java.awt.Rectangle;
 import java.awt.GridBagLayout;
 import java.awt.image.BufferedImage;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -57,12 +56,15 @@ class OldViciosPanel extends PluginPanel
 	private final JPanel center = new JPanel(cards);
 	private final JPanel noticesList = cardList();
 	private final JPanel eventsList = cardList();
-	private final BiConsumer<String, Consumer<BufferedImage>> imageLoader;
+	private final ImageLoader imageLoader;
 
-	/**
-	 * @param imageLoader baixa (ou pega do cache) a imagem de uma URL e chama o callback na EDT
-	 */
-	OldViciosPanel(BiConsumer<String, Consumer<BufferedImage>> imageLoader, Runnable openConfig)
+	/** Baixa (ou pega do cache) a imagem de um card e chama o callback na EDT. */
+	interface ImageLoader
+	{
+		void load(CardPanel.Kind kind, ContentCard card, Consumer<BufferedImage> callback);
+	}
+
+	OldViciosPanel(ImageLoader imageLoader, Runnable openConfig)
 	{
 		// false = sem scroll externo; cada aba tem o seu
 		super(false);
@@ -307,9 +309,9 @@ class OldViciosPanel extends PluginPanel
 		for (ContentCard card : cards)
 		{
 			CardPanel panel = new CardPanel(card, kind);
-			if (card.imageUrl != null && !card.imageUrl.isEmpty())
+			if (card.imageVersion != null && !card.imageVersion.isEmpty())
 			{
-				imageLoader.accept(card.imageUrl, panel::setImage);
+				imageLoader.load(kind, card, panel::setImage);
 			}
 			list.add(panel);
 			list.add(Box.createVerticalStrut(6));
