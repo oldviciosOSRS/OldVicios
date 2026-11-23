@@ -140,8 +140,9 @@ class CardPanel extends JPanel
 			return;
 		}
 		textWidth = width;
-		title.setText(html(titleHtml, width));
-		body.setText(bodyHtml.isEmpty() ? "" : html(bodyHtml, width));
+		title.setText(html(titleHtml, width, false));
+		// Justificado: na coluna estreita, o alinhamento à esquerda deixava uma sobra grande na direita
+		body.setText(bodyHtml.isEmpty() ? "" : html(bodyHtml, width, true));
 		revalidate();
 		repaint();
 	}
@@ -246,8 +247,9 @@ class CardPanel extends JPanel
 	 * Em "pt", não "px": o HTML do Swing multiplica px por 1,3, então width:214px montava o texto
 	 * com 278 pixels e cortava o fim de cada linha. pt é 1 pixel na tela.
 	 */
-	static String html(String content, int width)
+	static String html(String content, int width, boolean justify)
 	{
-		return "<html><div style='width:" + width + "pt'>" + content + "</div></html>";
+		String align = justify ? ";text-align:justify" : "";
+		return "<html><div style='width:" + width + "pt" + align + "'>" + content + "</div></html>";
 	}
 }

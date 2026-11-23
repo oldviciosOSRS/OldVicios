@@ -37,7 +37,7 @@ public class CardPanelTest
 	{
 		// Com width em px o Swing montava 278 pixels pra 214 pedidos e o texto saía cortado
 		JLabel label = new JLabel(CardPanel.html("obrigado pela participação no bingo, ficamos muito contente "
-			+ "com sua progressão no CS e isso será lembrado para sempre!", 214));
+			+ "com sua progressão no CS e isso será lembrado para sempre!", 214, true));
 		label.setFont(FontManager.getRunescapeSmallFont());
 		assertTrue("largura " + label.getPreferredSize().width, label.getPreferredSize().width <= 214);
 	}
