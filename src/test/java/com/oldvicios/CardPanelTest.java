@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import javax.swing.JLabel;
+import net.runelite.client.ui.FontManager;
 import org.junit.Test;
 
 public class CardPanelTest
@@ -28,6 +30,16 @@ public class CardPanelTest
 		String iso = ZonedDateTime.now(ZoneId.of("UTC")).plusDays(16).withHour(23).withMinute(0).toString();
 		String formatted = CardPanel.formatDate(iso, CardPanel.Kind.EVENT);
 		assertTrue(formatted, formatted.contains(" às 20h · em "));
+	}
+
+	@Test
+	public void textFitsTheRequestedWidth()
+	{
+		// Com width em px o Swing montava 278 pixels pra 214 pedidos e o texto saía cortado
+		JLabel label = new JLabel(CardPanel.html("obrigado pela participação no bingo, ficamos muito contente "
+			+ "com sua progressão no CS e isso será lembrado para sempre!", 214));
+		label.setFont(FontManager.getRunescapeSmallFont());
+		assertTrue("largura " + label.getPreferredSize().width, label.getPreferredSize().width <= 214);
 	}
 
 	@Test

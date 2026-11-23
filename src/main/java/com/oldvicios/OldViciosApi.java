@@ -38,7 +38,7 @@ import okhttp3.ResponseBody;
 class OldViciosApi
 {
 	/** Versão do plugin, enviada em toda chamada (X-OV-Version). Manter igual a runelite-plugin.properties. */
-	static final String VERSION = "0.1.1";
+	static final String VERSION = "0.1.2";
 
 	private static final String BASE_URL = "https://api.oldvicios.com.br/v1/plugin";
 	private static final String ACCOUNT_SALT = "oldvicios-plugin-v1";

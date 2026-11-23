@@ -242,8 +242,12 @@ class CardPanel extends JPanel
 			.replace("\n", "<br>");
 	}
 
-	private static String html(String content, int width)
+	/**
+	 * Em "pt", não "px": o HTML do Swing multiplica px por 1,3, então width:214px montava o texto
+	 * com 278 pixels e cortava o fim de cada linha. pt é 1 pixel na tela.
+	 */
+	static String html(String content, int width)
 	{
-		return "<html><div style='width:" + width + "px'>" + content + "</div></html>";
+		return "<html><div style='width:" + width + "pt'>" + content + "</div></html>";
 	}
 }

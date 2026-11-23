@@ -94,7 +94,6 @@ public class OldViciosPlugin extends Plugin
 
 	private static final long DEFAULT_MIN_LOOT_VALUE = 3_000_000L;
 	private static final String CLAN_NAME = "oldvicios";
-	private static final long CONTENT_REFRESH_MINUTES = 5;
 	private static final long UPDATES_POLL_SECONDS = 45;
 
 	@Inject
@@ -138,10 +137,11 @@ public class OldViciosPlugin extends Plugin
 
 	private OldViciosPanel panel;
 	private NavigationButton navButton;
-	private ScheduledFuture<?> contentRefresh;
 	private ScheduledFuture<?> updatesPoll;
 	// Última notificação já vista (null = ainda não sabemos; a 1ª consulta só pega o cursor)
 	private volatile Integer updatesCursor;
+	// contentVersion do último /updates: as abas só recarregam quando ele muda
+	private volatile String contentVersion;
 	// Imagens dos cards: baixadas uma vez por sessão
 	private final Map<String, BufferedImage> imageCache = new ConcurrentHashMap<>();
 
@@ -161,7 +161,6 @@ public class OldViciosPlugin extends Plugin
 	{
 		panel = new OldViciosPanel(this::loadImage, this::openConfig);
 		addNavigationButton();
-		contentRefresh = executor.scheduleWithFixedDelay(this::refreshContent, 0, CONTENT_REFRESH_MINUTES, TimeUnit.MINUTES);
 		updatesPoll = executor.scheduleWithFixedDelay(this::pollUpdates, 0, UPDATES_POLL_SECONDS, TimeUnit.SECONDS);
 
 		if (client.getGameState() == GameState.LOGGED_IN)
@@ -177,17 +176,13 @@ public class OldViciosPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
-		if (contentRefresh != null)
-		{
-			contentRefresh.cancel(false);
-			contentRefresh = null;
-		}
 		if (updatesPoll != null)
 		{
 			updatesPoll.cancel(false);
 			updatesPoll = null;
 		}
 		updatesCursor = null;
+		contentVersion = null;
 		clientToolbar.removeNavigation(navButton);
 		navButton = null;
 		panel = null;
@@ -238,9 +233,15 @@ public class OldViciosPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		// LOGGED_IN chega de novo depois de toda tela de "Loading" (teleporte, troca de mundo,
+		// instância). Reconectar aí limpava o painel a cada loading. Trocar de conta passa pela
+		// LOGIN_SCREEN, que desconecta, então basta autenticar quando ainda não está conectado.
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			authPending = true;
+			if (!connected)
+			{
+				authPending = true;
+			}
 		}
 		else if (event.getGameState() == GameState.LOGIN_SCREEN)
 		{
@@ -249,6 +250,7 @@ public class OldViciosPlugin extends Plugin
 			authPending = false;
 			accountId = null;
 			updatesCursor = null;
+			contentVersion = null;
 			disconnect(loggedOutMessage());
 		}
 	}
@@ -561,12 +563,16 @@ public class OldViciosPlugin extends Plugin
 				return;
 			}
 			updatesCursor = result.data.get("cursor").getAsInt();
-			if (since == null || !result.data.has("messages"))
-			{
-				return;
-			}
-			boolean refresh = false;
-			for (JsonElement element : result.data.getAsJsonArray("messages"))
+
+			// Edição e remoção não geram notificação: o contentVersion avisa que as abas mudaram
+			String version = result.data.has("contentVersion") && !result.data.get("contentVersion").isJsonNull()
+				? result.data.get("contentVersion").getAsString() : null;
+			String previous = contentVersion;
+			contentVersion = version;
+			boolean refresh = version != null && previous != null && !version.equals(previous);
+
+			JsonArray messages = since != null && result.data.has("messages") ? result.data.getAsJsonArray("messages") : new JsonArray();
+			for (JsonElement element : messages)
 			{
 				JsonObject message = element.getAsJsonObject();
 				String kind = message.get("kind").getAsString();
