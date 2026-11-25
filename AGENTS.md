@@ -78,6 +78,32 @@ After completing a task, do not declare it done. Instead:
 3. Tell the user *what to test* — the specific behavior you changed, the golden path, and any edge cases worth exercising.
 4. Wait for the user to confirm the feature works in-game before considering the task complete. A clean JVM start is not a passing test.
 
+## Releasing a new version
+
+Players only receive a version when its PR in `runelite/plugin-hub` is merged, so that merge is the release.
+
+1. In the release commit, bump `version=` in `runelite-plugin.properties` and add a `## OldVicios X.Y.Z` section at the top of `CHANGELOG.md`. Edit the properties file with `sed`: it is read as ISO-8859-1, so non-ASCII characters must be written as `ã` etc. (`VersionTest` fails otherwise).
+2. Push to `main`, tag the commit `vX.Y.Z`, and open the plugin-hub PR with `commit=` set to that commit.
+3. Do nothing else. Within an hour of the merge, `.github/workflows/changelog.yml` posts the section to the Discord changelog channel (`#🪵┃plugin-changelog`) with the merge date and publishes the GitHub release `vX.Y.Z`. Never post the changelog by hand and never create the release yourself: a published release is how the workflow knows a version was already posted.
+
+### Writing the CHANGELOG.md section
+
+- Portuguese, written for players: what changed for them. No technical details (class names, endpoints, PR numbers).
+- Only the sections that apply, as bold lines followed by `-` items: `**Adicionado**`, `**Modificado**`, `**Corrigido**`.
+- Do not write the date. The workflow adds `*Publicada em dd/mm/aaaa*` (merge date, Brasília time). An optional italic line right below the heading becomes a note after the date, e.g. `*primeira versão, em testes com a staff*` → `*Publicada em 21/11/2026 · primeira versão, em testes com a staff*`.
+- The name is always `OldVicios`, one word.
+- The final message must fit in 2000 characters (Discord limit); the workflow fails otherwise.
+
+### If the changelog workflow fails
+
+It runs every hour at :17. It can also be started from the Actions tab ("Run workflow"); `dry_run` is on by default there and only prints the message. A failed run posts nothing, and the next run retries:
+
+- "CHANGELOG.md não tem a seção": add the section to `main`.
+- "rascunho da release": a previous run stopped halfway. Check the channel; if the message is there, publish the draft release, otherwise delete it.
+- The webhook URL lives only in the `CHANGELOG_WEBHOOK_URL` repository secret (webhook "OV Plugin" in the channel). Never commit it or print it.
+
+GitHub disables scheduled workflows in public repos after 60 days without activity. To prevent it, the workflow pushes an empty commit once `main` has been idle for 50 days. If it gets disabled anyway, re-enable it in the Actions tab. It then posts the version currently on the Plugin Hub, so check the channel for any version released while it was off.
+
 ## Submitting
 
 When submitting a pull request to runelite/plugin-hub, append an attribution footer to the PR description structured like:

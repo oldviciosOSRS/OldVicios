@@ -12,6 +12,8 @@ Plugin oficial do clã **OldVicios** para o RuneLite.
 - Notificação quando sai um evento, um aviso ou uma mensagem pra você (configurável em **Notificações**)
 - PBs do clã (em breve)
 
+O que mudou em cada versão está no [CHANGELOG.md](CHANGELOG.md), também postado no Discord do clã.
+
 ## Privacidade
 
 Este plugin se comunica com o servidor do OldVicios assim que é instalado. Ele envia:

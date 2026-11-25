@@ -1,0 +1,53 @@
+name: Changelog no Discord
+
+# Quando o PR de uma versão é mergeado no runelite/plugin-hub, posta a seção dela do CHANGELOG.md
+# no #🪵┃plugin-changelog e cria a release vX.Y.Z (a release marca a versão como já postada).
+# Detalhes em .github/scripts/changelog.mjs e no AGENTS.md ("Releasing a new version").
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Só mostrar a mensagem, sem postar'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: changelog
+  cancel-in-progress: false
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # Em repo público o GitHub desliga workflow agendado depois de 60 dias sem atividade.
+      # Se a main está parada há 50 dias, um commit vazio mantém o agendamento vivo.
+      - name: Manter o agendamento ativo
+        if: github.event_name == 'schedule'
+        run: |
+          idle_days=$(( ( $(date +%s) - $(git log -1 --format=%ct) ) / 86400 ))
+          if [ "$idle_days" -ge 50 ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit --allow-empty -m "chore: keep changelog workflow active (${idle_days} days idle)"
+            git push
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Postar o changelog da versão publicada
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOG_WEBHOOK_URL: ${{ secrets.CHANGELOG_WEBHOOK_URL }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: node .github/scripts/changelog.mjs
