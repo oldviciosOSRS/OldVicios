@@ -40,15 +40,34 @@ O plugin não coleta credenciais nem dados de outros jogadores.
 
 Requer JDK 11 ou superior.
 
+### Testando no RuneLite de desenvolvimento
+
 ```bash
 ./gradlew run
 ```
 
-Abre um RuneLite de desenvolvimento com o plugin carregado. Para logar com Jagex Account, siga [Using Jagex Accounts](https://github.com/runelite/runelite/wiki/Using-Jagex-Accounts).
+Abre um RuneLite de desenvolvimento (`--developer-mode --debug`, com `-ea`) com o plugin carregado. A cada mudança no código, feche o cliente e rode de novo.
 
-O plugin sempre fala com a API de produção (`api.oldvicios.com.br`), inclusive no cliente de desenvolvimento. Para não mandar drop de teste para o canal do clã, deixe **Enviar drops** e **Enviar drops PK** desligados enquanto testa.
+- **macOS:** o `build.gradle` já passa `--add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED`, a mesma flag do launcher oficial. Sem ela o cliente não abre no Mac.
+- **Login com Jagex Account:** o cliente de desenvolvimento não abre pelo Jagex Launcher. Pelo [guia oficial](https://github.com/runelite/runelite/wiki/Using-Jagex-Accounts):
+  1. Com o cliente aberto, clique no botão de contas Jagex na barra lateral e em **Add Jagex Account**.
+  2. Faça o login da Jagex na janela que abrir.
+  3. Escolha o personagem e clique em **Play Now**.
+  4. Nas próximas vezes, basta escolher o personagem e **Play Now**.
+- **Não use o método antigo** (`--insecure-write-credentials`, que grava `~/.runelite/credentials.properties`). Esse arquivo guarda a sessão da conta e dá acesso a ela sem senha nem 2FA. Se ele existir, apague-o.
+- **Não dá para testar no RuneLite normal.** Colocar o `.jar` em `~/.runelite/sideloaded-plugins` com `--developer-mode` no launcher não carrega o plugin: o RuneLite desliga o modo de desenvolvedor quando é aberto pelo launcher. Teste sempre pelo `./gradlew run`.
 
-Testes: `./gradlew test`. Como publicar uma versão nova e escrever o changelog: [AGENTS.md](AGENTS.md), seção "Releasing a new version".
+### O que esperar ao testar
+
+- O plugin sempre fala com a API de produção (`api.oldvicios.com.br`), inclusive no cliente de desenvolvimento. Não existe ambiente de teste.
+- Para conectar, a conta precisa estar no clã (grupo 715 no Wise Old Man). Se o backend estiver com `PLUGIN_BETA_ROLES` definido, ela também precisa ter um desses cargos no WOM.
+- Deixe **Enviar drops** e **Enviar drops PK** desligados enquanto testa, senão o drop vai para o canal real do clã. Se precisar testar o envio, combine com a staff antes.
+
+### Testes automatizados
+
+`./gradlew test`. O `VersionTest` também confere que o `runelite-plugin.properties` não tem caractere fora do ASCII.
+
+Como publicar uma versão nova e escrever o changelog: [AGENTS.md](AGENTS.md), seção "Releasing a new version".
 
 ## Licença
 

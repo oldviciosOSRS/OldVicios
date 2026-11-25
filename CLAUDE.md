@@ -22,6 +22,10 @@ Como conversam: o painel chama o backend com um JWT da sessão, o bot chama com 
   - `GET /notices`, `/events`, `/{aba}/:id/image` e `/updates`. Este último é consultado a cada 45s e só recarrega as abas quando algo muda.
   - O contrato está em `src/routes/pluginRoutes.ts` e `src/services/pluginService.ts` do backend. Mudança de payload precisa ir nos dois repos.
 - Testando no cliente de desenvolvimento, deixe **Enviar drops** e **Enviar drops PK** desligados, senão o drop de teste vai para o canal real do clã.
+- Teste só pelo `./gradlew run`, com login pelo painel de contas Jagex do próprio cliente (passo a passo no `README.md`).
+  - Sideload no RuneLite normal (`~/.runelite/sideloaded-plugins`) não funciona: com launcher, o modo de desenvolvedor fica desligado.
+  - Não sugira `--insecure-write-credentials`: grava a sessão da conta em arquivo.
+  - Quem testa no jogo é uma pessoa. Nunca automatize input do jogo (ver "Testing" no `AGENTS.md`).
 
 ### Regras de configuração
 
