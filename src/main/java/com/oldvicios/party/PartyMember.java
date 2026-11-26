@@ -7,7 +7,8 @@ final class PartyMember
 {
 	final String name;
 	final int combatLevel;
-	final int killCount;
+	/** null = sem KC (atividade sem KC no hiscore, ou abaixo do mínimo para aparecer nele). */
+	final Integer killCount;
 	final Color color;
 	AccountType accountType = AccountType.NORMAL;
 	/** Modo de loot que o jogador quer (escolhido ao se candidatar; o do grupo é só a preferência do líder). */
@@ -16,7 +17,7 @@ final class PartyMember
 	/** Está na mesma party do RuneLite (entrou pelo botão "Entrar"). */
 	boolean inRuneLiteParty;
 
-	PartyMember(String name, int combatLevel, int killCount, int world, Color color, boolean inRuneLiteParty)
+	PartyMember(String name, int combatLevel, Integer killCount, int world, Color color, boolean inRuneLiteParty)
 	{
 		this.name = name;
 		this.combatLevel = combatLevel;

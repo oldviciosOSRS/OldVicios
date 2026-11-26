@@ -42,6 +42,8 @@ public class PartyFinderPanel extends JPanel
 	private Activity filter;
 	/** Tela atual, para redesenhar quando o estado muda. */
 	private Runnable currentScreen = this::showList;
+	/** false na tela de criar grupo: redesenhar apagaria o que o jogador está digitando. */
+	private boolean currentScreenRefreshable = true;
 
 	public PartyFinderPanel(SpriteManager spriteManager)
 	{
@@ -70,7 +72,7 @@ public class PartyFinderPanel extends JPanel
 			spriteManager.getSpriteAsync(type.spriteId, 0, image -> SwingUtilities.invokeLater(() ->
 			{
 				accountIcons.put(type, image);
-				currentScreen.run();
+				refresh();
 			}));
 		}
 	}
@@ -84,7 +86,16 @@ public class PartyFinderPanel extends JPanel
 	public void setPlayerName(String name)
 	{
 		store.setLocalPlayerName(name);
-		currentScreen.run();
+		refresh();
+	}
+
+	/** Redesenha a tela atual com o estado novo, menos formulários (ver currentScreenRefreshable). */
+	private void refresh()
+	{
+		if (currentScreenRefreshable)
+		{
+			currentScreen.run();
+		}
 	}
 
 	public void shutdown()
@@ -137,7 +148,13 @@ public class PartyFinderPanel extends JPanel
 
 	private void show(Runnable screen, JComponent content)
 	{
+		show(screen, content, true);
+	}
+
+	private void show(Runnable screen, JComponent content, boolean refreshable)
+	{
 		currentScreen = screen;
+		currentScreenRefreshable = refreshable;
 		removeAll();
 		add(content, BorderLayout.NORTH);
 		revalidate();
@@ -167,7 +184,11 @@ public class PartyFinderPanel extends JPanel
 
 		if (store.application == MockPartyStore.Application.PENDING)
 		{
-			screen.add(PartyUi.banner(store.appliedParty.name, "aguardando " + store.appliedParty.leader.name, PartyUi.GRAY,
+			// Grupo cheio: o candidato continua na fila (o líder ainda pode aceitar se abrir vaga)
+			String waiting = store.appliedParty.isFull()
+				? "grupo cheio: você está na fila"
+				: "aguardando " + store.appliedParty.leader.name;
+			screen.add(PartyUi.banner(store.appliedParty.name, waiting, PartyUi.GRAY,
 				PartyUi.button("Cancelar", () ->
 				{
 					mockAccept.stop();
@@ -263,7 +284,8 @@ public class PartyFinderPanel extends JPanel
 		}));
 		screen.add(PartyUi.spacer(10));
 		screen.add(PartyUi.backButton(this::showList));
-		show(this::showCreate, screen);
+		// Formulário: atualizações (ícones, nick, /me) não podem redesenhar e apagar o que foi digitado
+		show(this::showCreate, screen, false);
 	}
 
 	// ---------- Ver e candidatar-se ----------
@@ -431,7 +453,7 @@ public class PartyFinderPanel extends JPanel
 			});
 			// Mesmo bloco com fundo dos membros, mas um candidato por linha
 			applicants.add(PartyUi.memberTile(a, false, accountIcon(a),
-				Arrays.asList("CB " + a.combatLevel + ", " + a.killCount + " KC", "Loot: " + a.lootPreference.displayName),
+				Arrays.asList(combatAndKc(a), "Loot: " + a.lootPreference.displayName),
 				actions(PartyUi.womButton(a.name), accept, decline)));
 		}
 		screen.add(PartyUi.section("Candidatos (" + p.applicants.size() + ")", true, applicants));
@@ -520,6 +542,12 @@ public class PartyFinderPanel extends JPanel
 			store.joinRuneLiteParty();
 			redraw.run();
 		});
+	}
+
+	/** "CB 121, 64 KC", ou só "CB 121" quando o KC não veio (atividade sem KC ou abaixo do mínimo do hiscore). */
+	private static String combatAndKc(PartyMember m)
+	{
+		return "CB " + m.combatLevel + (m.killCount != null ? ", " + m.killCount + " KC" : "");
 	}
 
 	/** Legendas do quadradinho: primeira linha (CB ou "você") e o loot que o jogador quer. */

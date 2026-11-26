@@ -122,7 +122,7 @@ final class MockPartyStore
 		LOOT_PREFERENCES.put("Juninho PvM", LootMode.FFA);
 	}
 
-	private static PartyMember member(String name, int combatLevel, int killCount, int world, int color,
+	private static PartyMember member(String name, int combatLevel, Integer killCount, int world, int color,
 		boolean inRuneLiteParty)
 	{
 		PartyMember m = new PartyMember(name, combatLevel, killCount, world, COLORS[color % COLORS.length], inRuneLiteParty);
@@ -203,7 +203,8 @@ final class MockPartyStore
 		ownParty = new Party(name, activity, mode, world, slots, learners, partyLoot, minCombat, minKillCount, description, me);
 		// Candidatos de mentira para dar o que testar no Aceitar/Recusar
 		ownParty.applicants.add(member("Baiano Rng", 121, 64, 416, 3, true));
-		ownParty.applicants.add(member("Tia Neide", 117, 51, 302, 1, false));
+		// Sem KC (null): no plugin real, quando o KC não aparece no hiscore
+		ownParty.applicants.add(member("Tia Neide", 117, null, 302, 1, false));
 		parties.add(0, ownParty);
 		return ownParty;
 	}
