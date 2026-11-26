@@ -1,59 +1,67 @@
 package com.oldvicios.party;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-/** Um grupo aberto por um membro do clã. Sem expiração: fica até o líder encerrar. */
+/**
+ * Um grupo como o backend devolve (/v1/plugin/party). Na lista vem sem members/applicants; no detalhe
+ * vem com os membros, e com os candidatos só para o líder. Depois de criado, o grupo não muda.
+ */
 final class Party
 {
-	/** Nome dado pelo líder (padrão: o nome da atividade). */
-	final String name;
-	final Activity activity;
+	String id;
+	String name;
+	/** null quando o backend manda uma atividade que esta versão do plugin não conhece. */
+	Activity activity;
 	/** null = atividade sem modos. */
-	final String mode;
-	final int world;
-	final int slots;
-	final boolean learners;
-	/** Regra de loot do grupo (cada membro tem também o loot que ele quer, em PartyMember). */
-	final LootMode lootMode;
-	final int minCombat;
-	final int minKillCount;
-	final String description;
-	final PartyMember leader;
-	final List<PartyMember> members = new ArrayList<>();
-	final List<PartyMember> applicants = new ArrayList<>();
-	boolean applicationsOpen = true;
-
-	Party(String name, Activity activity, String mode, int world, int slots, boolean learners, LootMode lootMode,
-		int minCombat, int minKillCount, String description, PartyMember leader)
-	{
-		this.name = name == null || name.trim().isEmpty() ? activity.displayName : name.trim();
-		this.activity = activity;
-		this.mode = mode;
-		this.world = world;
-		this.slots = slots;
-		this.learners = learners;
-		this.lootMode = lootMode;
-		this.minCombat = minCombat;
-		this.minKillCount = minKillCount;
-		this.description = description;
-		this.leader = leader;
-		members.add(leader);
-	}
+	String mode;
+	int world;
+	int slots;
+	int memberCount;
+	boolean learners;
+	/** Regra de loot do grupo (cada membro tem também o loot que ele quer). */
+	LootMode lootMode;
+	int minCombat;
+	int minKillCount;
+	String leaderName;
+	boolean applicationsOpen;
+	String description;
+	List<PartyMember> members;
+	List<PartyMember> applicants;
 
 	boolean isFull()
 	{
-		return members.size() >= slots;
+		return memberCount >= slots;
 	}
 
 	String slotsText()
 	{
-		return members.size() + "/" + slots;
+		return memberCount + "/" + slots;
 	}
 
 	/** "Chambers of Xeric, Normal, W302" (sem o modo quando a atividade não tem). */
 	String summary()
 	{
 		return activity.displayName + (mode != null ? ", " + mode : "") + ", W" + world;
+	}
+
+	String lootText()
+	{
+		return lootMode != null ? lootMode.displayName : "—";
+	}
+
+	String descriptionText()
+	{
+		return description != null ? description : "";
+	}
+
+	List<PartyMember> members()
+	{
+		return members != null ? members : Collections.emptyList();
+	}
+
+	List<PartyMember> applicants()
+	{
+		return applicants != null ? applicants : Collections.emptyList();
 	}
 }

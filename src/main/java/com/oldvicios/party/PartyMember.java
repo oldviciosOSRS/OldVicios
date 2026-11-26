@@ -2,28 +2,42 @@ package com.oldvicios.party;
 
 import java.awt.Color;
 
-/** Jogador num grupo (membro ou candidato). Por enquanto, dados mockados. */
+/**
+ * Jogador num grupo (membro ou candidato), como o backend devolve (/v1/plugin/party).
+ * Campos preenchidos pelo Gson a partir do JSON.
+ */
 final class PartyMember
 {
-	final String name;
-	final int combatLevel;
-	/** null = sem KC (atividade sem KC no hiscore, ou abaixo do mínimo para aparecer nele). */
-	final Integer killCount;
-	final Color color;
-	AccountType accountType = AccountType.NORMAL;
-	/** Modo de loot que o jogador quer (escolhido ao se candidatar; o do grupo é só a preferência do líder). */
-	LootMode lootPreference = LootMode.SPLIT;
-	int world;
-	/** Está na mesma party do RuneLite (entrou pelo botão "Entrar"). */
-	boolean inRuneLiteParty;
+	private static final Color[] COLORS = {
+		new Color(127, 162, 255), new Color(232, 160, 216), new Color(240, 200, 100),
+		new Color(130, 210, 230), new Color(200, 170, 255), new Color(143, 211, 160),
+	};
 
-	PartyMember(String name, int combatLevel, Integer killCount, int world, Color color, boolean inRuneLiteParty)
+	/** Id da conta no backend (usado para aceitar, recusar e remover). */
+	int id;
+	String name;
+	int combatLevel;
+	AccountType accountType;
+	/** null = sem KC (atividade sem KC no hiscore, ou não informado). */
+	Integer killCount;
+	/** O loot que o jogador quer. */
+	LootMode lootPreference;
+	boolean leader;
+
+	/** Cor do nome no quadradinho, fixa por jogador. */
+	Color color()
 	{
-		this.name = name;
-		this.combatLevel = combatLevel;
-		this.killCount = killCount;
-		this.world = world;
-		this.color = color;
-		this.inRuneLiteParty = inRuneLiteParty;
+		return COLORS[Math.floorMod(id, COLORS.length)];
+	}
+
+	/** NORMAL quando o backend manda um modo que esta versão não conhece. */
+	AccountType accountType()
+	{
+		return accountType != null ? accountType : AccountType.NORMAL;
+	}
+
+	String lootText()
+	{
+		return lootPreference != null ? lootPreference.displayName : "—";
 	}
 }

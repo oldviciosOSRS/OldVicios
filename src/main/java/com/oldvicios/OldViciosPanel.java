@@ -1,7 +1,6 @@
 package com.oldvicios;
 
 import com.oldvicios.party.PartyFinderPanel;
-import net.runelite.client.game.SpriteManager;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
@@ -19,7 +18,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -60,10 +58,6 @@ class OldViciosPanel extends PluginPanel
 	private final JPanel noticesList = cardList();
 	private final JPanel eventsList = cardList();
 	private final PartyFinderPanel partyFinder;
-	// Faixa de debug acima das abas: só aparece com usuário mockado (enableDebug)
-	private final JPanel debugSlot = new JPanel(new BorderLayout());
-	private MaterialTabGroup tabs;
-	private MaterialTab partiesTab;
 	private final ImageLoader imageLoader;
 
 	/** Baixa (ou pega do cache) a imagem de um card e chama o callback na EDT. */
@@ -72,12 +66,12 @@ class OldViciosPanel extends PluginPanel
 		void load(CardPanel.Kind kind, ContentCard card, Consumer<BufferedImage> callback);
 	}
 
-	OldViciosPanel(ImageLoader imageLoader, Runnable openConfig, SpriteManager spriteManager)
+	OldViciosPanel(ImageLoader imageLoader, Runnable openConfig, PartyFinderPanel partyFinder)
 	{
 		// false = sem scroll externo; cada aba tem o seu
 		super(false);
 		this.imageLoader = imageLoader;
-		this.partyFinder = new PartyFinderPanel(spriteManager);
+		this.partyFinder = partyFinder;
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
@@ -137,26 +131,21 @@ class OldViciosPanel extends PluginPanel
 	{
 		JPanel display = new JPanel(new BorderLayout());
 		display.setOpaque(false);
-		tabs = new MaterialTabGroup(display);
+		MaterialTabGroup tabs = new MaterialTabGroup(display);
 		tabs.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
 		MaterialTab noticesTab = new MaterialTab("Avisos", tabs, scroll(noticesList));
 		MaterialTab eventsTab = new MaterialTab("Eventos", tabs, scroll(eventsList));
-		partiesTab = new MaterialTab("Grupos", tabs, scroll(partyFinder));
+		MaterialTab partiesTab = new MaterialTab("Grupos", tabs, scroll(partyFinder));
 		tabs.addTab(noticesTab);
 		tabs.addTab(eventsTab);
 		tabs.addTab(partiesTab);
 		tabs.select(noticesTab);
 
-		debugSlot.setOpaque(false);
-		JPanel top = new JPanel(new BorderLayout());
-		top.setOpaque(false);
-		top.add(debugSlot, BorderLayout.NORTH);
-		top.add(tabs, BorderLayout.CENTER);
 
 		JPanel content = new JPanel(new BorderLayout());
 		content.setOpaque(false);
 		content.setBorder(BorderFactory.createEmptyBorder(0, 6, 6, 6));
-		content.add(top, BorderLayout.NORTH);
+		content.add(tabs, BorderLayout.NORTH);
 		content.add(display, BorderLayout.CENTER);
 
 		JPanel clan = new JPanel(new BorderLayout());
@@ -297,20 +286,7 @@ class OldViciosPanel extends PluginPanel
 		cards.show(center, CLAN_CARD);
 	}
 
-	/** Mostra a faixa de debug acima das abas (só com usuário mockado no cliente de desenvolvimento). */
-	void enableDebug()
-	{
-		if (debugSlot.getComponentCount() > 0)
-		{
-			return;
-		}
-		JComponent bar = partyFinder.debugBar(() -> tabs.select(partiesTab));
-		debugSlot.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
-		debugSlot.add(bar, BorderLayout.CENTER);
-		debugSlot.revalidate();
-	}
-
-	/** Para os timers da aba Grupos (mocks). */
+	/** Para a consulta periódica da aba Grupos. */
 	void shutdown()
 	{
 		partyFinder.shutdown();
@@ -322,6 +298,7 @@ class OldViciosPanel extends PluginPanel
 		welcomeMessage.setText(centered(CardPanel.escape(message)));
 		noticesList.removeAll();
 		eventsList.removeAll();
+		partyFinder.disconnect();
 		cards.show(center, WELCOME_CARD);
 	}
 

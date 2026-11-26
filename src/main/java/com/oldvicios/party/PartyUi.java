@@ -422,8 +422,8 @@ final class PartyUi
 
 		JPanel top = new JPanel(new BorderLayout(4, 0));
 		top.setOpaque(false);
-		JLabel name = label(m.name, m.color, true);
-		top.add(withIcons(name, leader, accountIcon, m.accountType.displayName), BorderLayout.CENTER);
+		JLabel name = label(m.name, m.color(), true);
+		top.add(withIcons(name, leader, accountIcon, m.accountType().displayName), BorderLayout.CENTER);
 
 		JPanel middle = new JPanel(new DynamicGridLayout(0, 1, 0, 1));
 		middle.setOpaque(false);
