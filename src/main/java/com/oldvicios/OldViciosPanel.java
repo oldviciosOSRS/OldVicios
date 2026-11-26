@@ -1,5 +1,6 @@
 package com.oldvicios;
 
+import com.oldvicios.party.PartyFinderPanel;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
@@ -56,6 +57,7 @@ class OldViciosPanel extends PluginPanel
 	private final JPanel center = new JPanel(cards);
 	private final JPanel noticesList = cardList();
 	private final JPanel eventsList = cardList();
+	private final PartyFinderPanel partyFinder;
 	private final ImageLoader imageLoader;
 
 	/** Baixa (ou pega do cache) a imagem de um card e chama o callback na EDT. */
@@ -64,11 +66,12 @@ class OldViciosPanel extends PluginPanel
 		void load(CardPanel.Kind kind, ContentCard card, Consumer<BufferedImage> callback);
 	}
 
-	OldViciosPanel(ImageLoader imageLoader, Runnable openConfig)
+	OldViciosPanel(ImageLoader imageLoader, Runnable openConfig, PartyFinderPanel partyFinder)
 	{
 		// false = sem scroll externo; cada aba tem o seu
 		super(false);
 		this.imageLoader = imageLoader;
+		this.partyFinder = partyFinder;
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
@@ -132,9 +135,12 @@ class OldViciosPanel extends PluginPanel
 		tabs.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
 		MaterialTab noticesTab = new MaterialTab("Avisos", tabs, scroll(noticesList));
 		MaterialTab eventsTab = new MaterialTab("Eventos", tabs, scroll(eventsList));
+		MaterialTab partiesTab = new MaterialTab("Grupos", tabs, scroll(partyFinder));
 		tabs.addTab(noticesTab);
 		tabs.addTab(eventsTab);
+		tabs.addTab(partiesTab);
 		tabs.select(noticesTab);
+
 
 		JPanel content = new JPanel(new BorderLayout());
 		content.setOpaque(false);
@@ -276,7 +282,14 @@ class OldViciosPanel extends PluginPanel
 		status.setText(CardPanel.escape(text));
 		status.setForeground(java.awt.Color.WHITE);
 		status.setFont(FontManager.getRunescapeBoldFont());
+		partyFinder.setPlayerName(name);
 		cards.show(center, CLAN_CARD);
+	}
+
+	/** Para a consulta periódica da aba Grupos. */
+	void shutdown()
+	{
+		partyFinder.shutdown();
 	}
 
 	/** Mostra a tela de boas-vindas com a mensagem e tira o conteúdo do clã da tela. */
@@ -285,6 +298,7 @@ class OldViciosPanel extends PluginPanel
 		welcomeMessage.setText(centered(CardPanel.escape(message)));
 		noticesList.removeAll();
 		eventsList.removeAll();
+		partyFinder.disconnect();
 		cards.show(center, WELCOME_CARD);
 	}
 

@@ -1,6 +1,10 @@
 package com.oldvicios;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.oldvicios.party.PartyApi;
+import com.oldvicios.party.PartyContext;
+import com.oldvicios.party.PartyFinderPanel;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
@@ -27,6 +31,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.Player;
 import net.runelite.api.WorldType;
 import net.runelite.api.clan.ClanMember;
 import net.runelite.api.clan.ClanSettings;
@@ -50,6 +55,10 @@ import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.PlayerLootReceived;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.hiscore.HiscoreClient;
+import net.runelite.client.hiscore.HiscoreEndpoint;
+import net.runelite.client.hiscore.HiscoreResult;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -60,6 +69,7 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.ImageUtil;
+import okhttp3.OkHttpClient;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.loottracker.LootRecordType;
 
@@ -130,6 +140,18 @@ public class OldViciosPlugin extends Plugin
 	private ChatIconManager chatIconManager;
 
 	@Inject
+	private SpriteManager spriteManager;
+
+	@Inject
+	private HiscoreClient hiscoreClient;
+
+	@Inject
+	private OkHttpClient okHttpClient;
+
+	@Inject
+	private Gson gson;
+
+	@Inject
 	private EventBus eventBus;
 
 	@Inject
@@ -151,7 +173,8 @@ public class OldViciosPlugin extends Plugin
 	private boolean headerPending;
 	// Conectado ao backend E (se o clã do jogo já carregou) no clã OldVicios. Sem isso, nada do clã aparece.
 	private volatile boolean connected;
-	private String accountId;
+	// Lido também pelo OkHttp (aba Grupos)
+	private volatile String accountId;
 	private volatile long minLootValue = DEFAULT_MIN_LOOT_VALUE;
 	private int lastKillCount;
 	private int lastKillCountTick = -1;
@@ -159,7 +182,9 @@ public class OldViciosPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		panel = new OldViciosPanel(this::loadImage, this::openConfig);
+		PartyApi partyApi = new PartyApi(okHttpClient, gson, OldViciosApi.BASE_URL, OldViciosApi.VERSION, () -> accountId);
+		PartyFinderPanel partyFinder = new PartyFinderPanel(spriteManager, partyApi, partyContext());
+		panel = new OldViciosPanel(this::loadImage, this::openConfig, partyFinder);
 		addNavigationButton();
 		updatesPoll = executor.scheduleWithFixedDelay(this::pollUpdates, 0, UPDATES_POLL_SECONDS, TimeUnit.SECONDS);
 
@@ -185,6 +210,10 @@ public class OldViciosPlugin extends Plugin
 		contentVersion = null;
 		clientToolbar.removeNavigation(navButton);
 		navButton = null;
+		if (panel != null)
+		{
+			panel.shutdown();
+		}
 		panel = null;
 		imageCache.clear();
 		authPending = false;
@@ -607,6 +636,45 @@ public class OldViciosPlugin extends Plugin
 			}
 			notifier.notify(config.notification(), "OldVicios: " + line);
 		});
+	}
+
+	/** O que a aba Grupos lê do jogo: dados do jogador (client thread), hiscore (KC) e avisos no chat. */
+	private PartyContext partyContext()
+	{
+		return new PartyContext()
+		{
+			@Override
+			public void localPlayer(Consumer<PartyContext.LocalPlayer> callback)
+			{
+				clientThread.invokeLater(() ->
+				{
+					Player player = client.getLocalPlayer();
+					PartyContext.LocalPlayer info = client.getGameState() == GameState.LOGGED_IN && player != null
+						? new PartyContext.LocalPlayer(player.getCombatLevel(), client.getAccountType(), client.getWorld())
+						: null;
+					SwingUtilities.invokeLater(() -> callback.accept(info));
+				});
+			}
+
+			@Override
+			public void hiscores(String playerName, Consumer<HiscoreResult> callback)
+			{
+				hiscoreClient.lookupAsync(playerName, HiscoreEndpoint.NORMAL).whenComplete((result, error) ->
+				{
+					if (error != null)
+					{
+						log.debug("OldVicios hiscore lookup failed for {}", playerName, error);
+					}
+					SwingUtilities.invokeLater(() -> callback.accept(error == null ? result : null));
+				});
+			}
+
+			@Override
+			public void notify(String message)
+			{
+				OldViciosPlugin.this.notify(message, null);
+			}
+		};
 	}
 
 	/** Entrega a imagem do card na EDT, do cache ou baixando. */
