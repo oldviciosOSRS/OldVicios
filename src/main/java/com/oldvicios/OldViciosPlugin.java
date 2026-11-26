@@ -50,6 +50,7 @@ import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.PlayerLootReceived;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.SpriteManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -96,6 +97,12 @@ public class OldViciosPlugin extends Plugin
 	private static final String CLAN_NAME = "oldvicios";
 	private static final long UPDATES_POLL_SECONDS = 45;
 
+	/**
+	 * Só no cliente de desenvolvimento: OldViciosPluginTest preenche com OV_MOCK_USER para mostrar o painel
+	 * do clã com um nick falso, sem login no jogo nem no backend. Sempre null no Plugin Hub.
+	 */
+	static String previewName;
+
 	@Inject
 	private Client client;
 
@@ -130,6 +137,9 @@ public class OldViciosPlugin extends Plugin
 	private ChatIconManager chatIconManager;
 
 	@Inject
+	private SpriteManager spriteManager;
+
+	@Inject
 	private EventBus eventBus;
 
 	@Inject
@@ -159,9 +169,19 @@ public class OldViciosPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		panel = new OldViciosPanel(this::loadImage, this::openConfig);
+		panel = new OldViciosPanel(this::loadImage, this::openConfig, spriteManager);
 		addNavigationButton();
 		updatesPoll = executor.scheduleWithFixedDelay(this::pollUpdates, 0, UPDATES_POLL_SECONDS, TimeUnit.SECONDS);
+
+		if (previewName != null)
+		{
+			onPanel(p ->
+			{
+				p.enableDebug();
+				p.setPlayer(null, null, previewName);
+			});
+			return;
+		}
 
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
@@ -185,6 +205,10 @@ public class OldViciosPlugin extends Plugin
 		contentVersion = null;
 		clientToolbar.removeNavigation(navButton);
 		navButton = null;
+		if (panel != null)
+		{
+			panel.shutdown();
+		}
 		panel = null;
 		imageCache.clear();
 		authPending = false;
@@ -233,6 +257,11 @@ public class OldViciosPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		if (previewName != null)
+		{
+			// Usuário mockado: não autentica nem volta para a tela de boas-vindas
+			return;
+		}
 		// LOGGED_IN chega de novo depois de toda tela de "Loading" (teleporte, troca de mundo,
 		// instância). Reconectar aí limpava o painel a cada loading. Trocar de conta passa pela
 		// LOGIN_SCREEN, que desconecta, então basta autenticar quando ainda não está conectado.
