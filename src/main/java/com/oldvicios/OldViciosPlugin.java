@@ -2,6 +2,8 @@ package com.oldvicios;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.oldvicios.loot.KillCountService;
+import com.oldvicios.loot.RaidParty;
 import com.oldvicios.party.PartyApi;
 import com.oldvicios.party.PartyContext;
 import com.oldvicios.party.PartyFinderPanel;
@@ -21,8 +23,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
@@ -31,6 +31,8 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
 import net.runelite.api.clan.ClanMember;
@@ -54,6 +56,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.PlayerLootReceived;
+import net.runelite.client.events.ServerNpcLoot;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreClient;
@@ -95,12 +98,6 @@ public class OldViciosPlugin extends Plugin
 
 	private static final String PET_FOLLOWING = "You have a funny feeling like you're being followed.";
 	private static final String PET_BACKPACK = "You feel something weird sneaking into your backpack.";
-
-	// "Your Maggot King kill count is: 149." / "Your completed Chambers of Xeric count is: 50."
-	static final Pattern KILL_COUNT = Pattern.compile(
-		"^Your (?:completed )?(?<name>.+?) (?:kill |chest |completion |harvest |lap |success )?count is: (?<kc>[\\d,]+)");
-	// A mensagem de KC chega logo antes do drop
-	private static final int KILL_COUNT_MAX_AGE_TICKS = 5;
 
 	private static final long DEFAULT_MIN_LOOT_VALUE = 3_000_000L;
 	private static final String CLAN_NAME = "oldvicios";
@@ -157,6 +154,9 @@ public class OldViciosPlugin extends Plugin
 	@Inject
 	private ConfigManager configManager;
 
+	@Inject
+	private KillCountService killCountService;
+
 	private OldViciosPanel panel;
 	private NavigationButton navButton;
 	private ScheduledFuture<?> updatesPoll;
@@ -176,8 +176,6 @@ public class OldViciosPlugin extends Plugin
 	// Lido também pelo OkHttp (aba Grupos)
 	private volatile String accountId;
 	private volatile long minLootValue = DEFAULT_MIN_LOOT_VALUE;
-	private int lastKillCount;
-	private int lastKillCountTick = -1;
 
 	@Override
 	protected void startUp()
@@ -280,6 +278,8 @@ public class OldViciosPlugin extends Plugin
 			accountId = null;
 			updatesCursor = null;
 			contentVersion = null;
+			// Pode entrar outra conta: as KCs guardadas eram desta
+			killCountService.reset();
 			disconnect(loggedOutMessage());
 		}
 	}
@@ -384,12 +384,39 @@ public class OldViciosPlugin extends Plugin
 		return "Servidor indisponível, tente relogar mais tarde";
 	}
 
+	// Eventos de loot: a KC é atualizada antes de enviar, como no Dink.
+
 	@Subscribe
 	public void onNpcLootReceived(NpcLootReceived event)
 	{
+		NPC npc = event.getNpc();
+		if (KillCountService.isServerLootNpc(npc.getId()))
+		{
+			// Esses chegam pelo ServerNpcLoot
+			return;
+		}
+		killCountService.onNpcKill(npc.getName(), npc.getId());
+		if (config.sendDrops() && !KillCountService.SPECIAL_LOOT_NPC_IDS.contains(npc.getId()))
+		{
+			handleLoot(npc.getName(), event.getItems(), LootRecordType.NPC, false);
+		}
+	}
+
+	/** Loot que o próprio servidor informa (NPCs mais novos, Yama, Sailing, Hallowed Sepulchre...). */
+	@Subscribe
+	public void onServerNpcLoot(ServerNpcLoot event)
+	{
+		NPCComposition npc = event.getComposition();
+		String name = npc.getName();
+		if (!KillCountService.isServerLootNpc(npc.getId()) && (name == null || !name.startsWith("Hallowed Sepulchre")))
+		{
+			// Esses chegam pelo NpcLootReceived
+			return;
+		}
+		killCountService.onServerNpcLoot(name);
 		if (config.sendDrops())
 		{
-			handleLoot(event.getNpc().getName(), event.getItems(), false);
+			handleLoot(name, event.getItems(), LootRecordType.NPC, false);
 		}
 	}
 
@@ -398,17 +425,31 @@ public class OldViciosPlugin extends Plugin
 	{
 		if (config.sendPkDrops())
 		{
-			handleLoot(event.getPlayer().getName(), event.getItems(), true);
+			handleLoot(event.getPlayer().getName(), event.getItems(), LootRecordType.PLAYER, true);
 		}
 	}
 
 	@Subscribe
 	public void onLootReceived(LootReceived event)
 	{
-		// Baús e raids (CoX, ToB, ToA, Barrows...). NPC e PK já chegam pelos eventos acima.
-		if (event.getType() == LootRecordType.EVENT && config.sendDrops())
+		killCountService.onLoot(event);
+
+		if (!config.sendDrops())
 		{
-			handleLoot(event.getName(), event.getItems(), false);
+			return;
+		}
+		if (event.getType() == LootRecordType.EVENT)
+		{
+			// Baús e raids (CoX, ToB, ToA, Barrows...), com o modo da raid no nome
+			handleLoot(killCountService.getStandardizedSource(event), event.getItems(), LootRecordType.EVENT, false);
+		}
+		else if (event.getType() == LootRecordType.NPC && KillCountService.SPECIAL_LOOT_NPC_NAMES.contains(event.getName()))
+		{
+			// Araxxor, Whisperer, Royal Titans e Gauntlet: o RuneLite manda este evento em vez do NpcLootReceived
+			String source = killCountService.getStandardizedSource(event);
+			LootRecordType type = KillCountService.THE_GAUNTLET.equals(source) || KillCountService.CG_NAME.equals(source)
+				? LootRecordType.EVENT : LootRecordType.NPC;
+			handleLoot(source, event.getItems(), type, false);
 		}
 	}
 
@@ -420,14 +461,7 @@ public class OldViciosPlugin extends Plugin
 			return;
 		}
 		String message = Text.removeTags(event.getMessage());
-
-		Matcher kc = KILL_COUNT.matcher(message);
-		if (kc.find())
-		{
-			lastKillCount = Integer.parseInt(kc.group("kc").replace(",", ""));
-			lastKillCountTick = client.getTickCount();
-			return;
-		}
+		killCountService.onGameMessage(message);
 
 		if (!config.sendDrops() || !canSubmit())
 		{
@@ -458,7 +492,11 @@ public class OldViciosPlugin extends Plugin
 		return true;
 	}
 
-	private void handleLoot(String source, Collection<ItemStack> stacks, boolean pk)
+	/**
+	 * @param type NPC (kill), EVENT (raid, baú, Loot Chest) ou PLAYER (PK na morte)
+	 * @param pk   vai para o canal de PK, sem valor mínimo
+	 */
+	private void handleLoot(String source, Collection<ItemStack> stacks, LootRecordType type, boolean pk)
 	{
 		if (!canSubmit())
 		{
@@ -501,6 +539,7 @@ public class OldViciosPlugin extends Plugin
 		payload.addProperty("type", "LOOT");
 		payload.addProperty("playerName", client.getLocalPlayer().getName());
 		payload.addProperty("pk", pk);
+		payload.addProperty("category", type.name());
 		if (source != null)
 		{
 			payload.addProperty("source", source);
@@ -508,9 +547,19 @@ public class OldViciosPlugin extends Plugin
 		payload.add("items", items);
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("template", config.lootMessage());
-		if (!pk && lastKillCountTick >= 0 && client.getTickCount() - lastKillCountTick <= KILL_COUNT_MAX_AGE_TICKS)
+		if (!pk && source != null)
 		{
-			payload.addProperty("killCount", lastKillCount);
+			Integer killCount = killCountService.getKillCount(type, source);
+			if (killCount != null && killCount > 0)
+			{
+				payload.addProperty("killCount", killCount);
+			}
+			// Party só em raid, e só o número (nunca os nomes)
+			Integer partySize = type == LootRecordType.EVENT ? RaidParty.size(client, source) : null;
+			if (partySize != null)
+			{
+				payload.addProperty("partySize", partySize);
+			}
 		}
 		submitWithScreenshot(payload, pk ? "Loot PK enviado ao Discord do OldVicios!" : "Drop enviado ao Discord do OldVicios!");
 	}

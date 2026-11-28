@@ -4,7 +4,7 @@ Plugin oficial do clã **OldVicios** para o RuneLite. Disponível no Plugin Hub;
 
 ## Funções
 
-- Envio de drops e pets para o Discord do clã (ative em **Enviar drops**; vem desligado por padrão), com mensagem personalizável em **Mensagem do drop** (`%USERNAME%`, `%LOOT%`, `%SOURCE%`, `%COUNT%`, `%TOTAL_VALUE%`, `%WORLD%`). Só vão para o Discord itens que valem 3m ou mais.
+- Envio de drops e pets para o Discord do clã (ative em **Enviar drops**; vem desligado por padrão), com mensagem personalizável em **Mensagem do drop** (`%USERNAME%`, `%LOOT%`, `%SOURCE%`, `%COUNT%`, `%PARTY_SIZE%`, `%TOTAL_VALUE%`, `%WORLD%`). Só vão para o Discord itens que valem 3m ou mais. O drop leva a KC (ou o número de raids completas) e, em raid, o tamanho da party.
 - Envio de drops PK para o canal de PK, sem valor mínimo (opcional, ative em **Enviar drops PK**)
 - Abas **Avisos** (publicados pela staff) e **Eventos** (próximos eventos do clã)
 - Notificação quando sai um evento, um aviso ou uma mensagem pra você (configurável em **Notificações**)
@@ -30,7 +30,8 @@ Este plugin se comunica com o servidor do OldVicios assim que é instalado. Ele 
 - seu endereço IP (como qualquer requisição de rede);
 - o nome da sua conta no jogo;
 - um identificador anônimo da conta (hash do `accountHash` do RuneLite), usado para reconhecer sua conta mesmo após troca de nick;
-- seus drops e pets (item, valor e uma captura de tela), se **Enviar drops** estiver ativo. Drops de PvP só são enviados se você ativar **Enviar drops PK**.
+- seus drops e pets (item, valor, KC e uma captura de tela; em raid, também quantos jogadores estão na party, sem os nomes), se **Enviar drops** estiver ativo. Drops de PvP só são enviados se você ativar **Enviar drops PK**;
+- na aba **Grupos**, quando você cria um grupo ou se candidata: seu nível de combate, modo de jogo, mundo e KC na atividade.
 
 Para as abas e notificações, o plugin consulta o servidor do OldVicios a cada 45 segundos e só recarrega as abas quando algo mudou.
 
@@ -72,3 +73,5 @@ Como publicar uma versão nova e escrever o changelog: [AGENTS.md](AGENTS.md), s
 ## Licença
 
 BSD 2-Clause — veja [LICENSE](LICENSE).
+
+A contagem de KC e o tamanho da party (`src/main/java/com/oldvicios/loot/`) foram adaptados do [Dink](https://github.com/pajlads/DinkPlugin), também BSD 2-Clause: Copyright (c) 2022, Jake Barter; Copyright (c) 2022, pajlads. O texto completo da licença do Dink está no topo desses arquivos.

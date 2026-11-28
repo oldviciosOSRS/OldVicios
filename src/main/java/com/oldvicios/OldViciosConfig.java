@@ -82,7 +82,7 @@ public interface OldViciosConfig extends Config
 		keyName = "lootMessage",
 		name = "Mensagem do drop",
 		description = "Texto da mensagem no Discord. Use %USERNAME% (seu nome), %LOOT% (itens), %SOURCE% (boss/origem), "
-			+ "%COUNT% (kill count), %TOTAL_VALUE% (valor total) e %WORLD% (mundo)",
+			+ "%COUNT% (kill count), %PARTY_SIZE% (tamanho da party, em raid), %TOTAL_VALUE% (valor total) e %WORLD% (mundo)",
 		section = dropsSection,
 		position = 2
 	)
