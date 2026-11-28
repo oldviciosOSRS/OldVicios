@@ -731,8 +731,7 @@ public class OldViciosPlugin extends Plugin
 
 	private static BufferedImage icon()
 	{
-		// TODO: trocar pelo ícone do OldVicios
-		return ImageUtil.loadImageResource(OldViciosPlugin.class, "icon.png");
+		return ImageUtil.loadImageResource(OldViciosPlugin.class, "OV_LOGO_NAVBAR.png");
 	}
 
 	@Provides
