@@ -9,6 +9,21 @@ runelite-plugin.properties. Quando o PR da versão é mergeado no runelite/plugi
 merge. Formato e regras: AGENTS.md, seção "Releasing a new version".
 -->
 
+## OldVicios 0.2.0
+
+**Adicionado**
+- Aba **Grupos**: monte um grupo para um boss ou raid, ou candidate-se aos grupos de outros membros do clã. Seu combate, modo de jogo e KC na atividade aparecem sozinhos, lidos do jogo
+- Os drops mostram a KC (ou quantas raids você completou), inclusive no baú da raid
+- Drops de raid mostram quantos jogadores estavam na party
+- %PARTY_SIZE% na **Mensagem do drop**
+
+**Modificado**
+- Drop PK com loot key: é enviado quando você abre a key no Loot Chest, com o print do baú. Sem loot key, continua saindo na hora da kill
+- Novo ícone do OldVicios na barra lateral
+
+**Corrigido**
+- Drops de Araxxor, The Whisperer, Royal Titans e Gauntlet não eram enviados
+
 ## OldVicios 0.1.2
 
 **Corrigido**
