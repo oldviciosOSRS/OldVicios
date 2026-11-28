@@ -68,7 +68,7 @@ public interface OldViciosConfig extends Config
 	@ConfigItem(
 		keyName = "sendPkDrops",
 		name = "Enviar drops PK",
-		description = "Publica seus drops de PvP no canal de PK do Discord do OldVicios",
+		description = "Publica seus drops de PvP no canal de PK do Discord do OldVicios. Com loot keys, o drop sai quando você abre a key no Loot Chest",
 		warning = THIRD_PARTY_WARNING,
 		section = dropsSection,
 		position = 1

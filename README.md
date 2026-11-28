@@ -5,7 +5,7 @@ Plugin oficial do clã **OldVicios** para o RuneLite. Disponível no Plugin Hub;
 ## Funções
 
 - Envio de drops e pets para o Discord do clã (ative em **Enviar drops**; vem desligado por padrão), com mensagem personalizável em **Mensagem do drop** (`%USERNAME%`, `%LOOT%`, `%SOURCE%`, `%COUNT%`, `%PARTY_SIZE%`, `%TOTAL_VALUE%`, `%WORLD%`). Só vão para o Discord itens que valem 3m ou mais. O drop leva a KC (ou o número de raids completas) e, em raid, o tamanho da party.
-- Envio de drops PK para o canal de PK, sem valor mínimo (opcional, ative em **Enviar drops PK**)
+- Envio de drops PK para o canal de PK, sem valor mínimo (opcional, ative em **Enviar drops PK**). Com loot keys, o drop sai quando você abre a key no Loot Chest; sem loot keys, na hora da kill.
 - Abas **Avisos** (publicados pela staff) e **Eventos** (próximos eventos do clã)
 - Notificação quando sai um evento, um aviso ou uma mensagem pra você (configurável em **Notificações**)
 - PBs do clã (em breve)

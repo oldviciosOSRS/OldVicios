@@ -13,9 +13,12 @@ import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +34,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.Item;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
@@ -42,6 +46,9 @@ import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.client.Notifier;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
@@ -98,6 +105,16 @@ public class OldViciosPlugin extends Plugin
 
 	private static final String PET_FOLLOWING = "You have a funny feeling like you're being followed.";
 	private static final String PET_BACKPACK = "You feel something weird sneaking into your backpack.";
+
+	/** Baú onde se abrem as loot keys de PK; o RuneLite registra o loot com este nome. */
+	static final String LOOT_CHEST = "Loot Chest";
+	private static final Set<Integer> LOOT_KEYS = Set.of(
+		ItemID.WILDY_LOOT_KEY0, ItemID.WILDY_LOOT_KEY1, ItemID.WILDY_LOOT_KEY2, ItemID.WILDY_LOOT_KEY3, ItemID.WILDY_LOOT_KEY4);
+	/**
+	 * O PK na morte espera estes ticks: se uma loot key entrou no inventário perto da kill, o loot sai quando
+	 * a key for aberta no Loot Chest. Sem loot key (opção desligada no jogo), sai na morte, como antes.
+	 */
+	private static final int PK_LOOT_KEY_WAIT_TICKS = 2;
 
 	private static final long DEFAULT_MIN_LOOT_VALUE = 3_000_000L;
 	private static final String CLAN_NAME = "oldvicios";
@@ -176,6 +193,26 @@ public class OldViciosPlugin extends Plugin
 	// Lido também pelo OkHttp (aba Grupos)
 	private volatile String accountId;
 	private volatile long minLootValue = DEFAULT_MIN_LOOT_VALUE;
+
+	/** PKs na morte esperando para ver se veio loot key (client thread). */
+	private final List<PendingPk> pendingPks = new ArrayList<>();
+	/** Loot keys no inventário (-1 = ainda não lido) e o tick em que a última entrou. */
+	private int lootKeysInInventory = -1;
+	private int lastLootKeyTick = Integer.MIN_VALUE;
+
+	private static final class PendingPk
+	{
+		final String victim;
+		final Collection<ItemStack> items;
+		final int tick;
+
+		PendingPk(String victim, Collection<ItemStack> items, int tick)
+		{
+			this.victim = victim;
+			this.items = items;
+			this.tick = tick;
+		}
+	}
 
 	@Override
 	protected void startUp()
@@ -278,8 +315,11 @@ public class OldViciosPlugin extends Plugin
 			accountId = null;
 			updatesCursor = null;
 			contentVersion = null;
-			// Pode entrar outra conta: as KCs guardadas eram desta
+			// Pode entrar outra conta: KC, PK pendente e loot keys eram desta
 			killCountService.reset();
+			pendingPks.clear();
+			lootKeysInInventory = -1;
+			lastLootKeyTick = Integer.MIN_VALUE;
 			disconnect(loggedOutMessage());
 		}
 	}
@@ -325,6 +365,8 @@ public class OldViciosPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		processPendingPks();
+
 		if (headerPending && client.getTickCount() % 5 == 0)
 		{
 			updateHeader();
@@ -420,12 +462,13 @@ public class OldViciosPlugin extends Plugin
 		}
 	}
 
+	/** PK na morte: espera alguns ticks para ver se veio loot key (aí o loot sai no Loot Chest). */
 	@Subscribe
 	public void onPlayerLootReceived(PlayerLootReceived event)
 	{
 		if (config.sendPkDrops())
 		{
-			handleLoot(event.getPlayer().getName(), event.getItems(), LootRecordType.PLAYER, true);
+			pendingPks.add(new PendingPk(event.getPlayer().getName(), event.getItems(), client.getTickCount()));
 		}
 	}
 
@@ -434,6 +477,15 @@ public class OldViciosPlugin extends Plugin
 	{
 		killCountService.onLoot(event);
 
+		// Loot key aberta no Loot Chest: é o loot PK
+		if (event.getType() == LootRecordType.EVENT && LOOT_CHEST.equals(event.getName()))
+		{
+			if (config.sendPkDrops())
+			{
+				handleLoot(LOOT_CHEST, event.getItems(), LootRecordType.EVENT, true);
+			}
+			return;
+		}
 		if (!config.sendDrops())
 		{
 			return;
@@ -450,6 +502,55 @@ public class OldViciosPlugin extends Plugin
 			LootRecordType type = KillCountService.THE_GAUNTLET.equals(source) || KillCountService.CG_NAME.equals(source)
 				? LootRecordType.EVENT : LootRecordType.NPC;
 			handleLoot(source, event.getItems(), type, false);
+		}
+	}
+
+	/** Conta as loot keys do inventário para saber quando entrou uma nova (kill com loot key). */
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		if (event.getContainerId() != InventoryID.INV)
+		{
+			return;
+		}
+		int keys = 0;
+		for (Item item : event.getItemContainer().getItems())
+		{
+			if (LOOT_KEYS.contains(item.getId()))
+			{
+				keys += item.getQuantity();
+			}
+		}
+		if (lootKeysInInventory >= 0 && keys > lootKeysInInventory)
+		{
+			lastLootKeyTick = client.getTickCount();
+		}
+		lootKeysInInventory = keys;
+	}
+
+	private void processPendingPks()
+	{
+		if (pendingPks.isEmpty())
+		{
+			return;
+		}
+		int now = client.getTickCount();
+		for (Iterator<PendingPk> it = pendingPks.iterator(); it.hasNext(); )
+		{
+			PendingPk pk = it.next();
+			if (now - pk.tick < PK_LOOT_KEY_WAIT_TICKS)
+			{
+				continue;
+			}
+			it.remove();
+			boolean keyOnGround = pk.items.stream().anyMatch(i -> LOOT_KEYS.contains(i.getId()));
+			boolean keyInInventory = lastLootKeyTick >= pk.tick - PK_LOOT_KEY_WAIT_TICKS;
+			if (keyOnGround || keyInInventory)
+			{
+				// Com loot key, o loot é enviado quando a key for aberta no Loot Chest
+				continue;
+			}
+			handleLoot(pk.victim, pk.items, LootRecordType.PLAYER, true);
 		}
 	}
 
